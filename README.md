@@ -19,7 +19,7 @@ Features:
 
 How to Use:
 
-1. Due to Civitai's 30 MB file size limit, I provided a download link from .txt file or download from link.
+1. Download Caption Creator in releases.
 
 2. Unpack .zip archive
 
