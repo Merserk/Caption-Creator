@@ -1,7 +1,7 @@
 # Caption-Creator
 Caption Creator is a fast and portable tool for generating high-quality image captions and tags—ideal for custom dataset creation, especially for (FLUX Dev, Pony, SDXL 1.0 Base, Illustrious), and more. Works seamlessly for both training and image generation.
 
-Features:
+#### Features:
 
 - Supports Tags/Captions: Use for both tag and caption generation.
 
@@ -17,7 +17,7 @@ Features:
 
 - Easy to Use: Minimal setup, intuitive workflow.
 
-How to Use:
+#### How to Use:
 
 1. Download Caption Creator in releases.
 
@@ -39,7 +39,7 @@ How to Use:
 
 8. Ready
 
-Ideal For
+#### Ideal For
 
 - Image captioning/tagging
 
@@ -47,7 +47,7 @@ Ideal For
 
 - Training dataset creation
 
-Structure
+#### Structure
 ```
 Caption-Creator/
 ├── input/                          <-- Input folder for images dataset
@@ -65,14 +65,14 @@ Caption-Creator/
 └── README.md                       <-- Introduces and explains a program 
 ```
 
-Screenshots
+#### Screenshots
 ![image](https://github.com/user-attachments/assets/4d2bc0e4-e679-4544-a468-6ec5692b2f22)
 ![image](https://github.com/user-attachments/assets/04bcb8ca-2800-42e8-b7cd-68be008e4231)
 
 Output Example (image by Keith Griego)
 ![image](https://github.com/user-attachments/assets/1f78cc8c-bb73-4872-b4ab-d22873a44113)
 
-Captions:
+### Captions:
 
 Digital artwork of a young woman in profile view, facing left. The subject has short, straight, white hair with bright pink neon highlights that glow intensely against the dark background. Her skin is pale and smooth, with delicate features including a small nose and full lips. She wears a high-collared black jacket adorned with intricate patterns and subtle orange accents.
 
@@ -82,14 +82,14 @@ Her eyes are large and expressive, with a hint of purple irises visible despite 
 
 The overall style combines elements of anime and cyberpunk aesthetics, characterized by its vivid color palette, sharp contrasts, and emphasis on neon lighting. The texture of the artwork is smooth and polished, with clean lines and a high level of detail in both the character's face and clothing. The composition draws attention to the contrast between the glowing neon and the dark, blurred background, creating a dynamic and visually striking image.
 
-Tags:
+### Tags:
 
 digital art, anime style, neon lights, cyberpunk city background, female character, side profile, short pink bob haircut with glowing neon highlights, large expressive eyes, dark glossy jacket with reflective patterns, bright colorful city lights in background, soft light on face, sharp contrast between neon and shadows, futuristic aesthetic, vibrant colors, high detail, intricate lighting effects, urban night scene, modern digital illustration, glowing outlines, sleek and stylish appearance, subtle facial expression, dynamic composition, vivid color palette, detailed textures, realistic shading, illuminated hair strands, urban environment, cityscape elements in background, atmospheric lighting, contemporary digital artwork.
 
 VirusTotal
 ![image](https://github.com/user-attachments/assets/b37d8455-6c6f-45e6-9d1a-18a8d2f2b82c)
 
-Tags
+#### Tags
 
 #caption-creator #dataset #tagging #portable #uncensored #batch-processing #memory-optimized
 
