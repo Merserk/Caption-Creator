@@ -31,11 +31,11 @@ Caption Creator is a fast and portable tool for generating high-quality image ca
 
 6. Run `run_portable_auto.bat`
 
-6.1. Select Captions or Tags generation
+   6.1. Select Captions or Tags generation
 
-6.2. Enable or disable Low-VRAM model. (Reduces ~1GB VRAM, may be slightly slower)
+   6.2. Enable or disable Low-VRAM model. (Reduces ~1GB VRAM, may be slightly slower)
 
-6.3. Select model
+   6.3. Select model
 
 7. Processed files will be saved in the `output` folder as: `1.png`, `1.txt`, `2.png`, `2.txt`, etc.
 
