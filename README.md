@@ -55,21 +55,22 @@ Ideal For
 
 Structure
 
+```
 Caption-Creator/
-├── input/                          <-- Input folder for images dataset
-│   ├── cat_on_sofa.jpg             <-- Input image (example)
-│   └── landscape_painting.png      <-- Input image (example)
-├── output/                         <-- Output folder for images/captions dataset
-│   ├── 1.png                       <-- Converted .png from input folder
-│   ├── 1.txt                       <-- Generated Captions for 1.png
-│   ├── 2.png                       <-- Converted .png from input folder
-│   └── 2.txt                       <-- Generated Captions for 1.png
-├── run_portable_auto.bat           <-- Start the program
-├── models/                         <-- Downloaded models
-├── bin/                            <-- Runtime libraries
-├── config.ini                      <-- Configuration file
-└── README.md                       <-- Introduces and explains a program 
-
+├── input/                   <-- Input folder for images dataset
+│   ├── cat_on_sofa.jpg      <-- Input image (example)
+│   └── landscape_painting.png <-- Input image (example)
+├── output/                  <-- Output folder for images/captions dataset
+│   ├── 1.png                <-- Converted .png from input folder
+│   ├── 1.txt                <-- Generated Captions for 1.png
+│   ├── 2.png                <-- Converted .png from input folder
+│   └── 2.txt                <-- Generated Captions for 2.png
+├── run_portable_auto.bat    <-- Start the program
+├── models/                  <-- Downloaded models
+├── bin/                     <-- Runtime libraries
+├── config.ini               <-- Configuration file
+└── README.md                <-- Introduces and explains a program
+```
 
 
 Screenshots
