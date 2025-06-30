@@ -69,7 +69,7 @@ Support on Patreon - https://www.patreon.com/MM744
 ---
 
 ## Structure
-
+```
 Caption-Creator/
 ├── input/                          <-- Input folder for images dataset
 │   ├── cat_on_sofa.jpg             <-- Input image (example)
@@ -86,7 +86,7 @@ Caption-Creator/
 ├── bin/                            <-- Runtime libraries
 ├── config.ini                      <-- Configuration file
 └── README.md                       <-- Introduces and explains a program 
-
+```
 
 ---
 
