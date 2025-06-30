@@ -49,8 +49,7 @@ Support on Patreon - https://www.patreon.com/MM744
     Run `Run_Caption_Creator_UI.bat` to start the program.
 
 4.  **Prepare Images**  
-    - **Option A (Recommended):** Place all your images in the `input` folder before running a batch process.
-    - **Option B (GUI):** Drag and drop images/folders directly into the UI.
+    Drag and drop images/folders directly into the UI.
 
 5.  **Configure and Generate**
     - Select **Single Image** or **Batch Processing** mode.
