@@ -8,9 +8,11 @@ Support on Patreon - https://www.patreon.com/MM744
 ## Screenshots
 
 **Single Image Mode:**
+![image](https://github.com/user-attachments/assets/9597f70a-9c62-44ee-823a-c574d8589c80)
 
 
 **Batch Processing Mode:**
+![image](https://github.com/user-attachments/assets/40162309-53d3-4339-b32a-14932f7c62ac)
 
 
 ---
