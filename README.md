@@ -1,56 +1,94 @@
-# Caption-Creator
-Caption Creator is a fast and portable tool for generating high-quality image captions and tags—ideal for custom dataset creation, especially for (FLUX Dev, Pony, SDXL 1.0 Base, Illustrious), and more. Works seamlessly for both training and image generation.
+# Caption Creator v6.1 (Created by MM744)
+Support on Patreon - https://www.patreon.com/MM744                                                                           
 
-![31c19efa-2208-4593-a9bd-6647a57bd7ac22222](https://github.com/user-attachments/assets/1dd7ea61-8d71-4415-9e90-b62f7f5468f4)
+________/\\\\\\\\\______________________________________________________________________________        
+ _____/\\\////////_______________________________________________________________________________       
+  ___/\\\/____________________________/\\\\\\\\\______/\\\_______/\\\_____________________________      
+   __/\\\______________/\\\\\\\\\_____/\\\/////\\\__/\\\\\\\\\\\_\///______/\\\\\_____/\\/\\\\\\___     
+    _\/\\\_____________\////////\\\___\/\\\\\\\\\\__\////\\\////___/\\\___/\\\///\\\__\/\\\////\\\__    
+     _\//\\\______________/\\\\\\\\\\__\/\\\//////______\/\\\______\/\\\__/\\\__\//\\\_\/\\\__\//\\\_   
+      __\///\\\___________/\\\/////\\\__\/\\\____________\/\\\_/\\__\/\\\_\//\\\__/\\\__\/\\\___\/\\\_  
+       ____\////\\\\\\\\\_\//\\\\\\\\/\\_\/\\\____________\//\\\\\___\/\\\__\///\\\\\/___\/\\\___\/\\\_ 
+        _______\/////////___\////////\//__\///______________\/////____\///_____\/////_____\///____\///__
+________/\\\\\\\\\_______________________________________________________________________________________        
+ _____/\\\////////________________________________________________________________________________________       
+  ___/\\\/___________________________________________________________/\\\__________________________________      
+   __/\\\______________/\\/\\\\\\\______/\\\\\\\\___/\\\\\\\\\_____/\\\\\\\\\\\_____/\\\\\_____/\\/\\\\\\\__     
+    _\/\\\_____________\/\\\/////\\\___/\\\/////\\\_\////////\\\___\////\\\////____/\\\///\\\__\/\\\/////\\\_    
+     _\//\\\____________\/\\\___\///___/\\\\\\\\\\\____/\\\\\\\\\\_____\/\\\_______/\\\__\//\\\_\/\\\___\///__   
+      __\///\\\__________\/\\\_________\//\\///////____/\\\/////\\\_____\/\\\_/\\__\//\\\__/\\\__\/\\\_________  
+       ____\////\\\\\\\\\_\/\\\__________\//\\\\\\\\\\_\//\\\\\\\\/\\____\//\\\\\____\///\\\\\/___\/\\\_________ 
+        _______\/////////__\///____________\//////////___\////////\//______\/////_______\/////_____\///__________   
 
-## Features:
+**Caption Creator** is a fast and full portable GUI tool for generating high-quality image captions and tags—ideal for custom dataset creation, especially for **FLUX Dev, Pony, SDXL 1.0 Base, Illustrious**, and more. Works seamlessly for both training and image generation.
 
-- Supports Tags/Captions: Use for both tag and caption generation.
+---
 
-- Batch Processing: Process entire folders of images.
+## Screenshots
 
-- Memory Optimizations: Choose a model size to fit your GPU VRAM.
+**Single Image Mode:**
 
-- Fast Model Downloader: Download models quickly.
 
-- Portable: No installation required.
+**Batch Processing Mode:**
 
-- Uncensored Output: Full, unrestricted captions/tags.
 
-- Easy to Use: Minimal setup, intuitive workflow.
+---
 
-## How to Use:
+## Features
 
-1. Download Caption Creator in releases.
+- **GUI Interface:** An intuitive and easy-to-use graphical interface.
+- **Supports Tags/Captions:** Use for both tag and caption generation.
+- **Batch Processing:** Process entire folders of images at once.
+- **Memory Optimizations:** Choose a model size (5GB, 8GB, 10GB, 20GB) to fit your GPU VRAM.
+- **Low-VRAM Mode:** Reduces VRAM usage by ~1GB for systems with limited memory.
+- **Fast Model Downloader:** Download models quickly and easily.
+- **Portable:** No installation required, run it from anywhere.
+- **Uncensored Output:** Get full, unrestricted captions and tags.
+- **Trigger Words:** Automatically add specific words to the start of every caption or tag list.
+- **Max Word/Token Limit:** Control the length of your output to prevent overly long captions.
+- **Kohya_SS Support:** Exports in a folder structure fully compatible for training.
+- **Keep Model in VRAM:** Speeds up generation for subsequent tasks.
+- **Convenient Actions:** Copy to clipboard, open the output folder, or save results as a ZIP archive directly from the UI.
 
-2. Unpack .zip archive
+---
 
-3. Run `Download the model.bat` and select your VRAM (5GB, 8GB, 10GB, or 20GB). Larger models work on smaller VRAM but may be slower and uses more RAM.
+## How to Use
 
-4. Place images to process in the `input` folder.
+1.  **Download the Program**  
+    Due to file size limits on some platforms, you may need to download the program from a link provided in a `.txt` file or from the official source. Unpack the `.zip` archive.
 
-6. Run `run_portable_auto.bat`
+2.  **Download a Model**  
+    Run `Run_Downloader.bat` and select a model based on your GPU's VRAM (5GB, 8GB, 10GB, or 20GB).  
+    *Larger models are more accurate but use more VRAM. They can run on lower VRAM systems, but will be slower.*
 
-   6.1. Select Captions or Tags generation
+3.  **Launch the UI**  
+    Run `Run_Caption_Creator_UI.bat` to start the program.
 
-   6.2. Enable or disable Low-VRAM model. (Reduces ~1GB VRAM, may be slightly slower)
+4.  **Prepare Images**  
+    - **Option A (Recommended):** Place all your images in the `input` folder before running a batch process.
+    - **Option B (GUI):** Drag and drop images/folders directly into the UI.
 
-   6.3. Select model
+5.  **Configure and Generate**
+    - Select **Single Image** or **Batch Processing** mode.
+    - Choose between **Captions** or **Tags** generation.
+    - Optionally, add **Trigger Words** and set a **Max Word** count.
+    - Click **Start Generation**.
 
-7. Processed files will be saved in the `output` folder as: `1.png`, `1.txt`, `2.png`, `2.txt`, etc.
+6.  **Get Results**  
+    Processed images and their corresponding `.txt` captions/tags are saved in the `output` folder.
 
-8. Ready
+---
 
 ## Ideal For
 
-- Image captioning/tagging
+-   Image captioning and tagging automation
+-   Extracting prompts from images
+-   Creating training datasets for AI models
 
-- Extract prompt from image
+---
 
-- Training dataset creation
+## Structure
 
-#### Structure
-```
 Caption-Creator/
 ├── input/                          <-- Input folder for images dataset
 │   ├── cat_on_sofa.jpg             <-- Input image (example)
@@ -60,39 +98,29 @@ Caption-Creator/
 │   ├── 1.txt                       <-- Generated Captions for 1.png
 │   ├── 2.png                       <-- Converted .png from input folder
 │   └── 2.txt                       <-- Generated Captions for 1.png
-├── run_portable_auto.bat           <-- Start the program
+├── Run_Caption_Creator_UI.bat      <-- Start the program
+├── Run_Downloader.bat              <-- Download the models
+├── Run_Updater.bat                 <-- Update & Fix
 ├── models/                         <-- Downloaded models
 ├── bin/                            <-- Runtime libraries
 ├── config.ini                      <-- Configuration file
 └── README.md                       <-- Introduces and explains a program 
-```
 
-## Screenshots
-![image](https://github.com/user-attachments/assets/4d2bc0e4-e679-4544-a468-6ec5692b2f22)
-![image](https://github.com/user-attachments/assets/04bcb8ca-2800-42e8-b7cd-68be008e4231)
 
-Output Example (image by Keith Griego)
-![image](https://github.com/user-attachments/assets/1f78cc8c-bb73-4872-b4ab-d22873a44113)
+---
 
-### Captions:
+## Output Example
 
-Digital artwork of a young woman in profile view, facing left. The subject has short, straight, white hair with bright pink neon highlights that glow intensely against the dark background. Her skin is pale and smooth, with delicate features including a small nose and full lips. She wears a high-collared black jacket adorned with intricate patterns and subtle orange accents.
 
-The background is an abstract blur of vibrant colors, primarily pinks, blues, and whites, resembling a cityscape at night filled with neon lights. The neon lights create a futuristic atmosphere, casting a soft glow around her head and shoulders.
 
-Her eyes are large and expressive, with a hint of purple irises visible despite the shadow cast by her profile. A series of glowing pink lines and geometric shapes overlay her right ear and cheek, adding a cybernetic or digital element to her appearance.
+**Captions (Format as Single Paragraph enabled):**
+> The image is a digital illustration of a female character from the video game "Street Fighter II." She has blonde hair styled in two braids, each tied with red ribbons. Her skin tone is fair, and she has blue eyes that are focused intently forward. She wears a red beret hat with a white button on the front center, a green sleeveless tank top, and red fingerless gloves. Her right arm is extended forward, her fist clenched as if preparing for a punch or throwing a punch. Her left arm is slightly behind her body, also extending forward but less prominently positioned. The background is a gradient from dark gray at the top to black at the bottom, providing contrast to the character's bright clothing colors. The character's expression is one of determination and focus, with her mouth slightly open showing small teeth. Her muscular build is evident through the defined lines of her arms and shoulders. The overall style of the illustration is highly detailed and dynamic, typical of the "Street Fighter" series' art design. The image is framed by gray borders on both sides and top/bottom, creating a rectangular composition. This framing effect adds depth and focus to the central character. The entire image conveys a sense of strength and readiness for combat.
 
-The overall style combines elements of anime and cyberpunk aesthetics, characterized by its vivid color palette, sharp contrasts, and emphasis on neon lighting. The texture of the artwork is smooth and polished, with clean lines and a high level of detail in both the character's face and clothing. The composition draws attention to the contrast between the glowing neon and the dark, blurred background, creating a dynamic and visually striking image.
+**Tags:**
+> digital art, female character, muscular build, green tank top, red beret with white button, red fingerless gloves, blonde hair in braid, intense expression, right arm extended forward, clenched teeth, dark blue gradient background, vibrant colors, anime style, strong pose, upper body, dynamic lighting, high contrast, Illustrious quality, fighting game character, Camilla (Street Fighter), serious demeanor, confident stance, athletic physique, determined look, bold outlines, realistic shading, vivid details, medium close-up shot, action pose, character design, video game aesthetics, strong facial features, dynamic composition, energetic pose, fierce attitude, expressive eyes, powerful stance, combat-ready appearance
 
-### Tags:
-
-digital art, anime style, neon lights, cyberpunk city background, female character, side profile, short pink bob haircut with glowing neon highlights, large expressive eyes, dark glossy jacket with reflective patterns, bright colorful city lights in background, soft light on face, sharp contrast between neon and shadows, futuristic aesthetic, vibrant colors, high detail, intricate lighting effects, urban night scene, modern digital illustration, glowing outlines, sleek and stylish appearance, subtle facial expression, dynamic composition, vivid color palette, detailed textures, realistic shading, illuminated hair strands, urban environment, cityscape elements in background, atmospheric lighting, contemporary digital artwork.
-
-VirusTotal
-![image](https://github.com/user-attachments/assets/b37d8455-6c6f-45e6-9d1a-18a8d2f2b82c)
+---
 
 ## Tags
 
-#caption-creator #dataset #tagging #portable #uncensored #batch-processing #memory-optimized
-
-Support on Patreon - https://www.patreon.com/MM744
+`#caption-creator` `#dataset` `#tagging` `#portable` `#uncensored` `#batch-processing` `#memory-optimized`
