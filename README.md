@@ -39,7 +39,7 @@ Support on Patreon - https://www.patreon.com/MM744
 ## How to Use
 
 1.  **Download the Program**  
-    Due to file size limits on some platforms, you may need to download the program from a link provided in a `.txt` file or from the official source. Unpack the `.zip` archive.
+    Download the program. Unpack the `.zip` archive.
 
 2.  **Download a Model**  
     Run `Run_Downloader.bat` and select a model based on your GPU's VRAM (5GB, 8GB, 10GB, or 20GB).  
