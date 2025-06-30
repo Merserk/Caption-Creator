@@ -2,7 +2,8 @@
 
 **Caption Creator** is a fast and full portable GUI tool for generating high-quality image captions and tags—ideal for custom dataset creation, especially for **FLUX Dev, Pony, SDXL 1.0 Base, Illustrious**, and more. Works seamlessly for both training and image generation.
 
-Support on Patreon - https://www.patreon.com/MM744                                                                           
+Support on Patreon - https://www.patreon.com/MM744
+
 ---
 
 ## Screenshots
