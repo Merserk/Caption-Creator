@@ -14,7 +14,7 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 <img width="3839" height="2070" alt="Screenshot 2025-07-23 140334" src="https://github.com/user-attachments/assets/b0219dc6-13da-431e-b3ce-5a0437e39dcf" />
 
 **Batch Processing Mode:**
-<img width="1920" height="1044" alt="222222222222" src="https://github.com/user-attachments/assets/df311656-20fe-4877-b407-ce423613683a" />
+<img width="3840" height="2088" alt="Screenshot 2025-07-23 141326" src="https://github.com/user-attachments/assets/ff0f1687-2741-46eb-a503-ee72b36a59fc" />
 
 ---
 
