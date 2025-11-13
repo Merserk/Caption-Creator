@@ -1,4 +1,4 @@
-# Caption Creator v7.2
+# Caption Creator v7.3
 
 Experience the next evolution of dataset creation with **Caption Creator v7.2**. This fast, fully portable GUI tool is designed to generate exceptional image captions and tags with unparalleled ease. It's the ultimate assistant for creating high-quality datasets for AI models like **Pony, SDXL, and Illustrious**, perfect for both LoRA training and advanced image prompting.
 
@@ -8,7 +8,7 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 
 ---
 
-## Screenshots (New v7.2 UI)
+## Screenshots (New v7.3 UI)
 
 **Single Image Mode:**
 <img width="1920" height="1035" alt="1920_2025-07-23 140334" src="https://github.com/user-attachments/assets/54c8fc7b-64c0-430f-b61c-6139090b68f3" />
