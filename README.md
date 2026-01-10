@@ -11,10 +11,10 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 ## Screenshots (New v7.3 UI)
 
 **Single Image Mode:**
-<img width="1920" height="1035" alt="1920_2025-07-23 140334" src="https://github.com/user-attachments/assets/54c8fc7b-64c0-430f-b61c-6139090b68f3" />
+<img width="1920" height="1018" alt="2025-07-23 140334_1920_2" src="https://github.com/user-attachments/assets/d27cf32c-957b-4026-ba44-2d204ee9c631" />
 
 **Batch Processing Mode:**
-<img width="1920" height="1044" alt="1920_2025-07-23 141326" src="https://github.com/user-attachments/assets/7166d293-912e-438d-a838-89d997ef03e5" />
+<img width="1920" height="1027" alt="2025-07-23 141326_1920_2" src="https://github.com/user-attachments/assets/65c4c6c1-463f-4caa-ab7c-fd33e3c29443" />
 
 ---
 
