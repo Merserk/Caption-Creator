@@ -35,7 +35,6 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 -   **VRAM Optimization:** Choose from models tailored for different GPU VRAM capacities (5GB, 8GB, 10GB, 20GB).
 -   **Low-VRAM Mode:** A dedicated checkbox to further reduce VRAM usage.
 -   **Keep Model Loaded:** An option to keep the AI model in VRAM, dramatically speeding up subsequent generations.
--   **Full Kohya_SS Export:** Configure and export in a folder structure fully compatible for training.
 -   **Flexible Formatting:** Use Trigger Words, define a Max Word count, and format captions as a single paragraph.
 -   **Convenient Actions:** Instantly copy text to the clipboard or open the output folder from the UI.
 
@@ -61,7 +60,7 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 
 5.  **Configure and Generate**
     -   Choose your generation type (**Captions** or **Tags**).
-    -   Adjust settings like Max Words, Trigger Words, or enable options like Kohya_SS export.
+    -   Adjust settings like Max Words, Trigger Words.
     -   Click **Generate**.
 
 6.  **Get Results**  
@@ -93,4 +92,4 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 
 ## Tags
 
-`#caption-creator` `#dataset` `#tagging` `#portable` `#uncensored` `#batch-processing` `#gui` `#ui-ux` `#kohya-ss` `#lm-studio` `#local-ai`
+`#caption-creator` `#dataset` `#tagging` `#portable` `#uncensored` `#batch-processing` `#gui` `#ui-ux` `#lm-studio` `#local-ai`
