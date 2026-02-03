@@ -8,7 +8,7 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 
 ---
 
-## Screenshots (New v7.3 UI)
+## Screenshots
 
 **Single Image Mode:**
 <img width="1920" height="1018" alt="2025-07-23 140334_1920_2" src="https://github.com/user-attachments/assets/d27cf32c-957b-4026-ba44-2d204ee9c631" />
