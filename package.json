@@ -1,0 +1,87 @@
+{
+  "name": "caption-creator",
+  "version": "8.2.0",
+  "description": "Desktop application for generating image captions and tags.",
+  "main": "main.js",
+  "author": "Merserk",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.mm744.captioncreator",
+    "productName": "Caption Creator",
+    "electronLanguages": [
+      "en-US"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "./bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "./config_koboldcpp.ini",
+        "to": "config_koboldcpp.ini"
+      },
+      {
+        "from": "./config_lm_studio.ini",
+        "to": "config_lm_studio.ini"
+      },
+      {
+        "from": "./quality-prompt-instruction.ini",
+        "to": "quality-prompt-instruction.ini"
+      },
+      {
+        "from": "./scripts",
+        "to": "scripts",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "./assets",
+        "to": "assets",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/images/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "find-process": "^2.1.1",
+    "fs-extra": "^11.3.4"
+  },
+  "overrides": {
+    "glob": "^13.0.6",
+    "rimraf": "^6.1.3"
+  }
+}

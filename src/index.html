@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Caption Creator</title>
+    <meta http-equiv="Content-Security-Policy"
+        content="script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:;">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Custom Frameless Title Bar -->
+    <div id="custom-titlebar">
+        <div class="titlebar-drag-region">
+            <span class="titlebar-title">Caption Creator</span>
+        </div>
+        <div class="titlebar-controls">
+            <button id="titlebar-online" class="titlebar-online-button">
+                Try Caption Creator Online
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </button>
+            <button id="titlebar-minimize" class="titlebar-button" aria-label="Minimize">
+                <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="1.5" rx="0.75" fill="currentColor"/></svg>
+            </button>
+            <button id="titlebar-maximize" class="titlebar-button" aria-label="Maximize">
+                <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+            </button>
+            <button id="titlebar-close" class="titlebar-button titlebar-close" aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="title-container">
+        <div class="title-left-group">
+            <img src="" id="app-icon" class="title-icon">
+        </div>
+        <img src="" id="patreon-logo" title="Support on Patreon">
+    </div>
+    <div class="container">
+        <!-- LEFT COLUMN -->
+        <div class="column column-left">
+
+            <div id="single-upload-box" class="upload-box">
+                <div id="upload-placeholder">
+                    <p>Click to Upload or Drag & Drop Image</p>
+                </div>
+                <img id="single-image-preview" src="" style="display: none;" />
+            </div>
+
+            <div id="batch-upload-box" class="upload-box" style="display: none;">
+                <p>Click to Upload or Drag & Drop Batch</p>
+            </div>
+
+            <div class="gr-group">
+                <label>Generation Mode</label>
+                <div class="switch-container" id="mode-switch">
+                    <div class="switch-glider"></div>
+                    <div class="switch-option active" data-value="Single Image">Single Image</div>
+                    <div class="switch-option" data-value="Batch Processing">Batch Processing</div>
+                </div>
+                <div class="switch-container" id="gen-type-switch">
+                    <div class="switch-glider"></div>
+                    <div class="switch-option active" data-value="captions">Captions</div>
+                    <div class="switch-option" data-value="tags">Tags</div>
+                </div>
+            </div>
+
+            <textarea id="trigger-words-input" placeholder="Trigger Words (Optional)" rows="3"></textarea>
+            <textarea id="prompt-enrichment-input" placeholder="Prompt Enrichment (Optional)" rows="3"></textarea>
+
+            <div class="gr-group">
+                <label>Max Words</label>
+                <div id="custom-slider-container" class="custom-slider-container">
+                    <div id="custom-slider-fill" class="custom-slider-fill">
+                        <span id="custom-slider-value" class="custom-slider-value">300</span>
+                        <div class="custom-slider-handle"></div>
+                    </div>
+                    <span id="custom-slider-max" class="custom-slider-max">300</span>
+                </div>
+                <!-- Hidden input to easily get the value later -->
+                <input type="hidden" id="max-words-value" value="300">
+            </div>
+
+            <div class="gr-group">
+                <label>Configuration</label>
+                <div class="checkbox-button-group">
+                    <label class="checkbox-label" for="low-vram-input">
+                        <input type="checkbox" id="low-vram-input">
+                        Enable Low-VRAM Mode
+                    </label>
+                    <label class="checkbox-label" for="keep-model-loaded-input">
+                        <input type="checkbox" id="keep-model-loaded-input">
+                        Keep model loaded after generation
+                    </label>
+                    <label class="checkbox-label" for="shutdown-pc-input">
+                        <input type="checkbox" id="shutdown-pc-input">
+                        Shut down PC after generation
+                    </label>
+                </div>
+            </div>
+
+
+
+            <div class="gr-group model-select-group" id="model-select-group">
+                <button type="button" id="model-select-button" class="model-select-button">
+                    <div class="model-select-content-wrapper">
+                        <!-- REMOVED: Icon element was here -->
+                        <div>
+                            <span class="model-select-label">Model / VRAM Configuration</span>
+                            <span id="selected-model-value" class="model-select-value">Loading...</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="column column-right">
+            <div class="right-column-scrollable">
+                <div class="gr-group">
+                    <label for="status-output">Live Status</label>
+                    <div id="progress-bar-container" style="display: none;">
+                        <div id="progress-bar"></div>
+                    </div>
+                    <textarea id="status-output" readonly></textarea>
+                </div>
+
+                <div class="image-display-area gr-group">
+                    <img id="single-image-output" src="" style="display: block;">
+                    <div id="batch-gallery-output" class="gallery" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="right-column-fixed-bottom">
+                <div id="single-text-group" class="gr-group">
+                    <label for="single-text-output">Generated Text</label>
+                    <textarea id="single-text-output"></textarea>
+                    <div class="button-group">
+                        <button id="copy-button" class="gr-button-secondary">Copy to Clipboard</button>
+                        <button id="open-folder-button-single" class="gr-button-secondary">📂 Open Output
+                            Folder</button>
+                        <button class="gr-button-primary start-button">Generate</button>
+                        <button class="gr-button-stop stop-button" style="display: none;">Stop</button>
+                    </div>
+                </div>
+
+                <div id="batch-text-group" class="gr-group" style="display: none;">
+                    <label for="batch-text-output">Selected Image Text</label>
+                    <textarea id="batch-text-output" readonly></textarea>
+                    <div class="button-group">
+                        <button id="copy-button-batch" class="gr-button-secondary">Copy to Clipboard</button>
+                        <button id="download-zip-button" class="gr-button-secondary">Save as ZIP</button>
+                        <button id="open-folder-button-batch" class="gr-button-secondary">📂 Open Output Folder</button>
+                        <button class="gr-button-primary start-button">Generate</button>
+                        <button class="gr-button-stop stop-button" style="display: none;">Stop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Model Selection -->
+    <div id="model-select-modal-overlay" class="modal-overlay">
+        <div id="model-options-panel" class="modal-panel">
+            <button id="model-modal-close-button" class="modal-close-button">×</button>
+            <!-- JS will populate this -->
+        </div>
+    </div>
+
+
+
+    <script src="./renderer.js"></script>
+</body>
+
+</html>
