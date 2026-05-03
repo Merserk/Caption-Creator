@@ -13,10 +13,10 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 ## Screenshots
 
 **Single Image Mode:**
-<img width="1920" height="1018" alt="2025-07-23 140334_1920_2" src="https://github.com/user-attachments/assets/d27cf32c-957b-4026-ba44-2d204ee9c631" />
+<img width="1200" height="750" alt="Screenshot 2026-03-20 211137" src="https://github.com/user-attachments/assets/5de2c0a1-8ae5-4425-a7a2-d829772fba45" />
 
 **Batch Processing Mode:**
-<img width="1920" height="1027" alt="2025-07-23 141326_1920_2" src="https://github.com/user-attachments/assets/65c4c6c1-463f-4caa-ab7c-fd33e3c29443" />
+<img width="1200" height="750" alt="Screenshot 2026-03-20 215115" src="https://github.com/user-attachments/assets/cc359824-6859-4fcb-a367-b6ab1dc2f420" />
 
 ---
 
