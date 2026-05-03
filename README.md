@@ -1,6 +1,8 @@
-# Caption Creator
+# Caption Creator (v9)
 
 Experience the next evolution of dataset creation with **Caption Creator**. This fast, fully portable GUI tool is designed to generate exceptional image captions and tags with unparalleled ease. It's the ultimate assistant for creating high-quality datasets, perfect for both LoRA training and advanced image prompting.
+
+Official Website: [caption-creator.merserk.com](https://caption-creator.merserk.com)
 
 The application runs entirely on your local machine, ensuring privacy and uncensored output.
 
@@ -32,8 +34,8 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 -   **Interactive Model Management:** Download, delete, and manage models directly from within the application.
 -   **Prompt Enrichment:** Add extra context or instructions to the AI on the fly.
 -   **Built-in ZIP Archiving:** Save your entire generation run into a single ZIP archive with one click.
--   **VRAM Optimization:** Choose from models tailored for different GPU VRAM capacities (5GB, 8GB, 10GB, 20GB).
--   **Low-VRAM Mode:** A dedicated checkbox to further reduce VRAM usage.
+-   **VRAM Optimization:** Choose from models tailored for different GPU VRAM capacities (6GB, 8GB, 10GB+).
+-   **Low-VRAM Mode (No KV Offload):** A dedicated checkbox to avoid offloading KV Cache or scratch buffers to VRAM. This allows more model layers to fit into GPU memory but may result in a significant decrease in generation speed.
 -   **Keep Model Loaded:** An option to keep the AI model in VRAM, dramatically speeding up subsequent generations.
 -   **Flexible Formatting:** Use Trigger Words, define a Max Word count, and format captions as a single paragraph.
 -   **Convenient Actions:** Instantly copy text to the clipboard or open the output folder from the UI.
