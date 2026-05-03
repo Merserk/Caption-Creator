@@ -1,4 +1,4 @@
-# Caption Creator (v9)
+# Caption Creator
 
 Experience the next evolution of dataset creation with **Caption Creator**. This fast, fully portable GUI tool is designed to generate exceptional image captions and tags with unparalleled ease. It's the ultimate assistant for creating high-quality datasets, perfect for both LoRA training and advanced image prompting.
 
