@@ -11,7 +11,7 @@ Place the KoboldCpp executable and its dependencies inside `bin/koboldcpp/`.
 - Required file: `koboldcpp-launcher.exe` (or `koboldcpp.exe`)
 
 ### 2. Embedded Python (optional)
-The app expects an embedded Python runtime at `bin/python-3.13.12-embed-amd64/`.
+The app expects an embedded Python runtime at `bin/python-3.13.13-embed-amd64/`.
 You can adjust the path in `main.js` if you prefer using a system-installed Python instead.
 
 - Download from: https://www.python.org/downloads/windows/

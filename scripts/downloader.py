@@ -2,51 +2,27 @@ import os
 import sys
 import time
 import urllib.request
-import shutil
 import json
 import traceback
 import hashlib
 
-# --- Model Definitions ---
-class Model:
-    """A class to hold model information."""
-    def __init__(self, name, file, url, estimated_mb, sha256=None):
-        self.name = name
-        self.file = file
-        self.url = url
-        self.estimated_mb = estimated_mb
-        self.sha256 = sha256
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
 
-MODELS = [
-    Model("Q2_K quantization", "llama-joycaption-beta-one-hf-llava.Q2_K.gguf", "https://huggingface.co/mradermacher/llama-joycaption-beta-one-hf-llava-GGUF/resolve/main/llama-joycaption-beta-one-hf-llava.Q2_K.gguf", 3000, "c2ba7b046751caed973fd171cc7c7c091ee7a3be434dbdbce7fd421f2b82011e"),
-    Model("Q4_K quantization", "llama-joycaption-beta-one-hf-llava.Q4_K_M.gguf", "https://huggingface.co/mradermacher/llama-joycaption-beta-one-hf-llava-GGUF/resolve/main/llama-joycaption-beta-one-hf-llava.Q4_K_M.gguf", 4000, "afbf943e9f2fed20e0889146b0d3940c8a6bfc519a61daac61188cf9ef511f77"),
-    Model("Q8_0 quantization", "llama-joycaption-beta-one-hf-llava.Q8_0.gguf", "https://huggingface.co/mradermacher/llama-joycaption-beta-one-hf-llava-GGUF/resolve/main/llama-joycaption-beta-one-hf-llava.Q8_0.gguf", 8000, "7dde03037091224d9765692663734b54016d00790434816dc6d151eb08443ed5"),
-    Model("F16 full precision", "llama-joycaption-beta-one-hf-llava.f16.gguf", "https://huggingface.co/mradermacher/llama-joycaption-beta-one-hf-llava-GGUF/resolve/main/llama-joycaption-beta-one-hf-llava.f16.gguf", 16000, "fb4e7b635f302c1cb39ec9693fd5474cbfd48513e812c1567ac7c1ea8cc73154"),
-]
-VISION_MODEL = Model("Vision Model", "llama-joycaption-beta-one-llava-mmproj-model-f16.gguf", "https://huggingface.co/concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf/resolve/main/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf", 500, "94002cb5c354c7c9e538e64f37d593db9eceeca2e94573bae6cd3b2bd8bb1952")
-VRAM_MAP = {
-    "5GB VRAM (Q2_K)": MODELS[0],
-    "8GB VRAM (Q4_K_M)": MODELS[1],
-    "10GB VRAM (Q8_0)": MODELS[2],
-    "20GB VRAM (F16)": MODELS[3]
-}
+from model_catalog import get_model_bundle
 
-# --- Path Configuration ---
-# The models directory path is now passed as a command-line argument.
-
-# --- JSON Messaging ---
 def send_json_message(msg_type, data):
     """Sends a structured JSON message to stdout."""
     payload = {"type": msg_type, "data": data}
     print(json.dumps(payload), flush=True)
 
-# --- Hash Verification ---
 def verify_hash(file_path, expected_hash):
     """Verifies the SHA-256 hash of a file."""
     if not expected_hash:
         return True
     
-    send_json_message('status', {'message': f'Verifying file integrity...'})
+    send_json_message('status', {'message': 'Verifying file integrity...'})
     sha256_hash = hashlib.sha256()
     try:
         with open(file_path, "rb") as f:
@@ -64,13 +40,19 @@ def verify_hash(file_path, expected_hash):
         send_json_message('status', {'message': f'Error during verification: {str(e)}'})
         return False
 
-# --- Download Logic ---
 def download_file(model, models_dir):
     """Downloads a file with detailed progress reporting via JSON, featuring retries and size validation."""
     dest_path = os.path.join(models_dir, model.file)
     url = model.url
     max_retries = 5
     retry_delay = 5
+    expected_min_size = model.estimated_mb * 1024 * 1024 * 0.9
+
+    if os.path.exists(dest_path) and os.path.getsize(dest_path) >= expected_min_size:
+        if verify_hash(dest_path, model.sha256):
+            send_json_message('status', {'message': f'{model.file} already exists. Skipping download.'})
+            return True
+        os.remove(dest_path)
 
     for attempt in range(max_retries):
         try:
@@ -79,15 +61,13 @@ def download_file(model, models_dir):
             req = urllib.request.Request(url, headers=headers, method='GET')
             
             with urllib.request.urlopen(req, timeout=30) as response:
-                if response.status == 206: # Partial Content
+                if response.status == 206:
                     content_length = int(response.getheader('Content-Length', 0))
                     total_size = downloaded + content_length
                     send_json_message('status', {'message': f'Resuming download (Attempt {attempt+1}/{max_retries})...'})
-                elif response.status == 200: # OK
+                elif response.status == 200:
                     total_size = int(response.getheader('Content-Length', 0))
                     if downloaded > 0:
-                        # If we get 200 but already have data, the server doesn't support Range or it's a new file.
-                        # We should overwrite or handle accordingly. For now, assume we restart.
                         downloaded = 0
                         open(dest_path, 'wb').close() 
                     send_json_message('status', {'message': f'Starting download (Attempt {attempt+1}/{max_retries})...'})
@@ -100,7 +80,7 @@ def download_file(model, models_dir):
                     last_update_time = start_time
 
                     while downloaded < total_size:
-                        chunk = response.read(65536) # Larger buffer for efficiency
+                        chunk = response.read(65536)
                         if not chunk:
                             if downloaded < total_size:
                                 raise ConnectionError(f"Incomplete read: expected {total_size} bytes, got {downloaded}")
@@ -136,8 +116,8 @@ def download_file(model, models_dir):
             
             if model.sha256:
                 if not verify_hash(dest_path, model.sha256):
-                     os.remove(dest_path)
-                     raise ValueError(f"Integrity check failed for {model.file}. File has been removed.")
+                    os.remove(dest_path)
+                    raise ValueError(f"Integrity check failed for {model.file}. File has been removed.")
             
             return True
 
@@ -151,7 +131,6 @@ def download_file(model, models_dir):
 
     return False
 
-# --- Main function ---
 def main():
     try:
         if len(sys.argv) != 3:
@@ -159,17 +138,15 @@ def main():
         
         target_model_key = sys.argv[1]
         models_dir = sys.argv[2]
-        model_to_download = VRAM_MAP.get(target_model_key)
+        model_bundle = get_model_bundle(target_model_key)
 
-        if not model_to_download:
+        if not model_bundle:
             raise ValueError(f"Model key '{target_model_key}' not found.")
 
         os.makedirs(models_dir, exist_ok=True)
 
-        if download_file(model_to_download, models_dir):
-            vision_dest_path = os.path.join(models_dir, VISION_MODEL.file)
-            if not os.path.exists(vision_dest_path) or os.path.getsize(vision_dest_path) < (VISION_MODEL.estimated_mb * 1024 * 1024 * 0.9):
-                 download_file(VISION_MODEL, models_dir)
+        if download_file(model_bundle.model, models_dir):
+            download_file(model_bundle.vision, models_dir)
 
     except Exception as e:
         send_json_message("error", {"message": f"{str(e)}\n{traceback.format_exc()}"})

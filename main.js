@@ -1,8 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs-extra');
-const find = require('find-process');
 const archiver = require('archiver');
 const http = require('http');
 const url = require('url');
@@ -17,19 +16,16 @@ let appIconBase64 = '';
 const isDev = !app.isPackaged;
 
 // --- Fixed Paths ---
-// In production, resources are in app.getAppPath() + '/resources/app.asar' or unpacked
 const getAppPath = () => {
     if (isDev) {
         return __dirname;
     }
-    // For packaged app, use app.getAppPath() which points to the correct location
     return app.getAppPath();
 };
 
 const projectRoot = isDev ? __dirname : process.resourcesPath;
 const appRoot = getAppPath();
 
-// These paths should work in both dev and production
 const srcDir = path.join(appRoot, 'src');
 const scriptsDir = path.join(projectRoot, 'scripts');
 const binRoot = path.join(projectRoot, 'bin');
@@ -38,13 +34,12 @@ const configPath = path.join(projectRoot, 'config_koboldcpp.ini');
 const lmStudioConfigPath = path.join(projectRoot, 'config_lm_studio.ini');
 const qualityPromptPath = path.join(projectRoot, 'quality-prompt-instruction.ini');
 
-// For user data directories, use app execution path
 const appExecRoot = isDev ? projectRoot : path.dirname(app.getPath('exe'));
 
 const CAPTION_SCRIPT = path.join(scriptsDir, 'caption_generator_portable.py');
 const DOWNLOADER_SCRIPT = path.join(scriptsDir, 'downloader.py');
 
-const PYTHON_EXE = path.join(binRoot, 'python-3.13.12-embed-amd64', 'python.exe');
+const PYTHON_EXE = path.join(binRoot, 'python-3.13.13-embed-amd64', 'python.exe');
 const MODELS_DIR = path.join(binRoot, 'models');
 
 const INPUT_DIR = path.join(appExecRoot, 'input');
@@ -58,12 +53,19 @@ console.log(`Logging to: ${appLogger.logFilePath}`);
 
 // --- Model Definitions ---
 const MODEL_MAP = {
-    "5GB VRAM (Q2_K)": "llama-joycaption-beta-one-hf-llava.Q2_K.gguf",
-    "8GB VRAM (Q4_K_M)": "llama-joycaption-beta-one-hf-llava.Q4_K_M.gguf",
-    "10GB VRAM (Q8_0)": "llama-joycaption-beta-one-hf-llava.Q8_0.gguf",
-    "20GB VRAM (F16)": "llama-joycaption-beta-one-hf-llava.f16.gguf"
+    "6GB VRAM (E2B Q4_K_P)": {
+        modelFile: "Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
+        visionFile: "mmproj-Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-f16.gguf"
+    },
+    "8GB VRAM (E4B Q4_K_P)": {
+        modelFile: "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
+        visionFile: "mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16.gguf"
+    },
+    "10GB+ VRAM (E4B Q8_K_P)": {
+        modelFile: "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf",
+        visionFile: "mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16.gguf"
+    }
 };
-const VISION_MODEL_FILE = "llama-joycaption-beta-one-llava-mmproj-model-f16.gguf";
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -74,19 +76,15 @@ function createWindow() {
             preload: path.join(srcDir, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            // Add these for better debugging
-            webSecurity: false, // Only if needed for file access
+            webSecurity: false,
             allowRunningInsecureContent: false
         },
         icon: path.join(assetsRoot, 'images', 'icon.png'),
-        // Add this to help with debugging
-        show: false // Don't show until ready
+        show: false
     });
 
-    // Remove the menu bar
     mainWindow.removeMenu();
 
-    // Show window when ready to prevent white screen
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
         if (isDev) {
@@ -100,12 +98,10 @@ function createWindow() {
         console.log(`[Renderer:${lvl}] ${message} (${sourceId}:${line})`);
     });
 
-    // Add error handling for the main window
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
         console.error('Failed to load:', errorDescription, 'at', validatedURL);
     });
 
-    // Load the HTML file
     const htmlPath = path.join(srcDir, 'index.html');
     console.log('Loading HTML from:', htmlPath);
     console.log('HTML file exists:', fs.existsSync(htmlPath));
@@ -124,7 +120,6 @@ app.whenReady().then(() => {
     console.log('scriptsDir:', scriptsDir);
     console.log('assetsRoot:', assetsRoot);
 
-    // Ensure directories exist
     try {
         fs.ensureDirSync(INPUT_DIR_SINGLE);
         fs.ensureDirSync(INPUT_DIR_BATCH);
@@ -136,7 +131,6 @@ app.whenReady().then(() => {
         console.error('Error creating directories:', error);
     }
 
-    // Load Patreon logo
     const patreonLogoPath = path.join(assetsRoot, 'images', 'patreon.png');
     try {
         if (fs.existsSync(patreonLogoPath)) {
@@ -150,7 +144,6 @@ app.whenReady().then(() => {
         console.error("Could not load Patreon logo:", e);
     }
 
-    // Load app icon
     const appIconPath = path.join(assetsRoot, 'images', 'icon.png');
     try {
         if (fs.existsSync(appIconPath)) {
@@ -189,7 +182,6 @@ app.on('quit', async () => {
     appLogger.close();
 });
 
-// Add error handling for uncaught exceptions
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
 });
@@ -198,7 +190,6 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// Replace the existing stopAllBackendProcesses function with this updated version
 async function stopAllBackendProcesses() {
     if (backendProcess && !backendProcess.killed) {
         backendProcess.kill('SIGKILL');
@@ -209,13 +200,11 @@ async function stopAllBackendProcesses() {
     } catch (e) { console.error("Error killing koboldcpp processes:", e); }
 }
 
-// Add this new function
 async function killKoboldProcesses() {
     return new Promise((resolve, reject) => {
         const systemRoot = process.env.SystemRoot || 'C:\\Windows';
         const tasklistPath = path.join(systemRoot, 'System32', 'tasklist.exe');
 
-        // Verify tasklist.exe exists to prevent spawn errors
         if (!fs.existsSync(tasklistPath)) {
             return reject(new Error('tasklist.exe not found. Ensure running on Windows.'));
         }
@@ -254,15 +243,12 @@ async function killKoboldProcesses() {
     });
 }
 
-// --- Post-Processing Functions ---
-
-
 function handleShutdown() {
     mainWindow.webContents.send('status-update', 'Task complete! SHUTTING DOWN PC IN 20 SECONDS.');
     spawn('shutdown', ['/s', '/t', '20'], {
         detached: true,
         stdio: 'ignore',
-        shell: false  // Explicitly disable shell to avoid security warning
+        shell: false
     }).unref();
 }
 
@@ -384,8 +370,10 @@ ipcMain.handle('get-model-availability', async () => {
     try {
         await fs.ensureDir(MODELS_DIR);
         const modelsInDir = (await fs.readdir(MODELS_DIR)).map(f => f.toLowerCase());
-        const availability = Object.entries(MODEL_MAP).map(([key, filename]) => ({
-            key, available: modelsInDir.includes(filename.toLowerCase())
+        const availability = Object.entries(MODEL_MAP).map(([key, files]) => ({
+            key,
+            available: modelsInDir.includes(files.modelFile.toLowerCase())
+                && modelsInDir.includes(files.visionFile.toLowerCase())
         }));
         availability.push({ key: "Custom (LM Studio)", available: true });
         return availability;
@@ -398,29 +386,31 @@ ipcMain.handle('get-model-availability', async () => {
 });
 
 ipcMain.handle('delete-model', async (event, modelKey) => {
-    const fileToDelete = MODEL_MAP[modelKey];
-    if (!fileToDelete) {
+    const modelFiles = MODEL_MAP[modelKey];
+    if (!modelFiles) {
         return { success: false, message: `Model key "${modelKey}" not found.` };
     }
 
     try {
-        const mainModelPath = path.join(MODELS_DIR, fileToDelete);
+        const mainModelPath = path.join(MODELS_DIR, modelFiles.modelFile);
         if (await fs.pathExists(mainModelPath)) {
             await fs.remove(mainModelPath);
         }
 
-        const allModelFiles = Object.values(MODEL_MAP);
-        const remainingModels = [];
+        const remainingVisionFiles = new Set();
         const filesInDir = await fs.readdir(MODELS_DIR);
 
-        for (const file of allModelFiles) {
-            if (filesInDir.some(dirFile => dirFile.toLowerCase() === file.toLowerCase())) {
-                remainingModels.push(file);
+        for (const files of Object.values(MODEL_MAP)) {
+            if (
+                files.modelFile !== modelFiles.modelFile
+                && filesInDir.some(dirFile => dirFile.toLowerCase() === files.modelFile.toLowerCase())
+            ) {
+                remainingVisionFiles.add(files.visionFile.toLowerCase());
             }
         }
 
-        if (remainingModels.length === 0) {
-            const visionModelPath = path.join(MODELS_DIR, VISION_MODEL_FILE);
+        if (!remainingVisionFiles.has(modelFiles.visionFile.toLowerCase())) {
+            const visionModelPath = path.join(MODELS_DIR, modelFiles.visionFile);
             if (await fs.pathExists(visionModelPath)) {
                 await fs.remove(visionModelPath);
             }
@@ -460,12 +450,16 @@ ipcMain.handle('check-lm-studio-connection', async () => {
 
 ipcMain.handle('download-model', async (event, modelKey) => {
     return new Promise((resolve, reject) => {
+        let detailedErrorMessage = null;
         const downloaderProcess = spawn(PYTHON_EXE, [DOWNLOADER_SCRIPT, modelKey, MODELS_DIR], { shell: false });
 
         downloaderProcess.stdout.on('data', (data) => {
             data.toString().trim().split('\n').forEach(line => {
                 try {
                     const json = JSON.parse(line);
+                    if (json.type === 'error' && json.data?.message) {
+                        detailedErrorMessage = json.data.message;
+                    }
                     json.data.modelKey = modelKey;
                     mainWindow.webContents.send(`download-${json.type}`, json.data);
                 } catch (e) {
@@ -485,8 +479,10 @@ ipcMain.handle('download-model', async (event, modelKey) => {
                 mainWindow.webContents.send('download-complete', { modelKey });
                 resolve({ success: true });
             } else {
-                const message = `Downloader exited with code ${code}.`;
-                mainWindow.webContents.send('download-error', { modelKey, message });
+                const message = detailedErrorMessage || `Downloader exited with code ${code}.`;
+                if (!detailedErrorMessage) {
+                    mainWindow.webContents.send('download-error', { modelKey, message });
+                }
                 reject(new Error(message));
             }
         });
@@ -527,23 +523,6 @@ ipcMain.handle('open-file-dialog', async () => {
     return await processSingleFile(filePaths[0]);
 });
 
-ipcMain.handle('clear-input-dir', async (_event, mode) => {
-    try {
-        if (mode === 'Single Image') {
-            await fs.emptyDir(INPUT_DIR_SINGLE);
-        } else if (mode === 'Batch Processing') {
-            await fs.emptyDir(INPUT_DIR_BATCH);
-        } else {
-            await fs.emptyDir(INPUT_DIR_SINGLE);
-            await fs.emptyDir(INPUT_DIR_BATCH);
-        }
-        return { success: true };
-    } catch (e) {
-        console.error('Error clearing input directory:', e);
-        return { success: false, message: e.message };
-    }
-});
-
 ipcMain.handle('handle-dropped-file', async (event, filePath) => {
     return await processSingleFile(filePath);
 });
@@ -554,15 +533,12 @@ ipcMain.handle('handle-pasted-image', async (event, imageArrayBuffer) => {
         return null;
     }
     try {
-        // The renderer sends an ArrayBuffer. The main process receives it
-        // and must convert it to a Node.js Buffer to save it.
         const imageBuffer = Buffer.from(imageArrayBuffer);
 
         await fs.ensureDir(INPUT_DIR_SINGLE);
         await fs.emptyDir(INPUT_DIR_SINGLE);
         const destPath = path.join(INPUT_DIR_SINGLE, 'pasted_image.png');
         await fs.writeFile(destPath, imageBuffer);
-        // Return the file URL so the renderer can display it
         return url.pathToFileURL(destPath).href;
     } catch (e) {
         console.error('Error handling pasted image:', e);

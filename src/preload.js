@@ -10,7 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     handlePastedImage: (arrayBuffer) => ipcRenderer.invoke('handle-pasted-image', arrayBuffer),
     openBatchDialog: () => ipcRenderer.invoke('open-batch-dialog'),
     handleDroppedBatch: (filePaths) => ipcRenderer.invoke('handle-dropped-batch', filePaths),
-    clearInputDir: () => ipcRenderer.invoke('clear-input-dir'),
     getOutputFiles: () => ipcRenderer.invoke('get-output-files'),
     getTextContent: (imagePath) => ipcRenderer.invoke('get-text-content', imagePath),
     openOutputFolder: () => ipcRenderer.send('open-output-folder'),

@@ -8,8 +8,6 @@ const appState = {
     lmStudioHeartbeatInterval: null,
     selectedModelKey: null,
     lmStudioDotCount: 0,
-    singleOriginalPath: null,
-    batchOriginalPaths: [],
     batchFilenamesText: '',
     singleHasSelection: false,
     batchHasSelection: false,
@@ -40,8 +38,8 @@ function setRunningState(isRunning) {
     DOMElements.progressBarContainer.style.display = isRunning ? 'block' : 'none';
     if (!isRunning) {
         DOMElements.progressBar.style.width = '0%';
-        setTimeout(() => { // Add a delay before hiding the bar
-            if (DOMElements.startButtons[0].style.display === 'block') { // ensure it's still stopped
+        setTimeout(() => {
+            if (DOMElements.startButtons[0].style.display === 'block') {
                 DOMElements.progressBarContainer.style.display = 'none';
             }
         }, 1500);
@@ -78,15 +76,11 @@ function updateStartButtonState() {
 async function handleFileSelection(selection) {
     if (!selection) return;
     const url = typeof selection === 'string' ? selection : selection.url;
-    const originalPath = typeof selection === 'string' ? null : selection.originalPath;
     if (url) {
         DOMElements.singleImagePreview.src = url + '?' + new Date().getTime();
         DOMElements.singleImagePreview.style.display = 'block';
         DOMElements.uploadPlaceholder.style.display = 'none';
         appState.singleHasSelection = true;
-    }
-    if (originalPath) {
-        appState.singleOriginalPath = originalPath;
     }
     updateStartButtonState();
 }
@@ -128,9 +122,8 @@ function getFilePath(file) {
 async function handleBatchSelection(result) {
     if (result) {
         DOMElements.statusOutput.value = `Successfully staged ${result.count} files for processing:\n${result.filenames}`;
-        appState.batchOriginalPaths = Array.isArray(result.paths) ? result.paths : [];
         appState.batchFilenamesText = result.filenames || '';
-        appState.batchHasSelection = appState.batchOriginalPaths.length > 0;
+        appState.batchHasSelection = Array.isArray(result.paths) && result.paths.length > 0;
     }
     updateStartButtonState();
 }
@@ -141,7 +134,23 @@ function updateCheckboxStates() {
     DOMElements.keepModelLoadedInput.disabled = isLmStudio;
 }
 
-// NEW: Updates the status text for all models based on the current selection
+function showGenerationStartupStatus(modelKey) {
+    clearStatusAnimation();
+    const message = modelKey === 'Custom (LM Studio)'
+        ? 'Connecting to the AI...'
+        : 'Starting backend...';
+    DOMElements.statusOutput.value = message;
+    DOMElements.statusOutput.scrollTop = DOMElements.statusOutput.scrollHeight;
+    DOMElements.progressBar.style.width = '0%';
+
+    let dotCount = 1;
+    const baseText = message.slice(0, -3);
+    appState.statusAnimationInterval = setInterval(() => {
+        DOMElements.statusOutput.value = baseText + '.'.repeat(dotCount);
+        dotCount = (dotCount % 3) + 1;
+    }, 400);
+}
+
 function updateModelStatusTexts() {
     const { modelOptionsPanel } = DOMElements;
     if (!modelOptionsPanel) return;
@@ -153,13 +162,11 @@ function updateModelStatusTexts() {
         const statusEl = item.querySelector('.model-status-text');
         if (!statusEl) return;
 
-        // Reset to its default state first
         if (statusEl.dataset.originalStatus) {
             statusEl.innerHTML = statusEl.dataset.originalStatus;
-            statusEl.className = 'model-status-text'; // Reset classes
+            statusEl.className = 'model-status-text';
         }
 
-        // Apply 'current' state if it's the selected model
         if (modelKey === appState.selectedModelKey) {
             statusEl.innerHTML = '(Current)';
             statusEl.classList.add('current');
@@ -180,7 +187,7 @@ async function populateModelList() {
         itemContainer.className = 'model-selector-item';
         itemContainer.dataset.modelKey = model.key;
 
-        const input = document.createElement('input'); // Keep hidden input for state
+        const input = document.createElement('input');
         input.type = 'radio';
         input.name = 'model';
         input.id = `radio-${model.key.replace(/[\s().]/g, '')}`;
@@ -256,7 +263,6 @@ async function populateModelList() {
 
         modelOptionsPanel.appendChild(itemContainer);
 
-        // Add click listener to the entire item
         itemContainer.addEventListener('click', () => {
             if (input.disabled) return;
             appState.selectedModelKey = model.key;
@@ -269,7 +275,6 @@ async function populateModelList() {
         });
     });
 
-    // Set initial selection
     if (!appState.selectedModelKey) {
         appState.selectedModelKey = firstAvailableModel;
     }
@@ -280,10 +285,9 @@ async function populateModelList() {
     }
     updateCheckboxStates();
     updateModelStatusTexts();
-    startLmStudioHeartbeat(); // Start auto-connection management
+    startLmStudioHeartbeat();
 }
 
-// NEW: Setup for the custom Max Words slider
 function setupCustomSlider() {
     const slider = DOMElements.customSlider;
     const min = 1;
@@ -293,7 +297,7 @@ function setupCustomSlider() {
     const updateSliderFromEvent = (e) => {
         const rect = slider.container.getBoundingClientRect();
         let percent = (e.clientX - rect.left) / rect.width;
-        percent = Math.max(0, Math.min(1, percent)); // Clamp between 0 and 1
+        percent = Math.max(0, Math.min(1, percent));
         const value = Math.round(min + percent * (max - min));
         setSliderValue(value);
     };
@@ -324,7 +328,6 @@ function setupCustomSlider() {
         }
     });
 
-    // Initialize
     setSliderValue(parseInt(slider.hiddenInput.value, 10));
 }
 
@@ -333,7 +336,6 @@ function setupCustomSlider() {
 // --- Event Listeners ---
 window.addEventListener('DOMContentLoaded', async () => {
     DOMElements = {
-        batchUploadColumn: document.getElementById('batch-upload-column'),
         singleTextGroup: document.getElementById('single-text-group'),
         batchTextGroup: document.getElementById('batch-text-group'),
         singleUploadBox: document.getElementById('single-upload-box'),
@@ -358,42 +360,32 @@ window.addEventListener('DOMContentLoaded', async () => {
         keepModelLoadedInput: document.getElementById('keep-model-loaded-input'),
         patreonLogo: document.getElementById('patreon-logo'),
         appIcon: document.getElementById('app-icon'),
-        // Model selection elements
-        modelSelectGroup: document.getElementById('model-select-group'),
         modelSelectButton: document.getElementById('model-select-button'),
-        // REMOVED: modelButtonIcon is no longer in the HTML
         selectedModelValue: document.getElementById('selected-model-value'),
         modelSelectModalOverlay: document.getElementById('model-select-modal-overlay'),
         modelModalCloseButton: document.getElementById('model-modal-close-button'),
         modelOptionsPanel: document.getElementById('model-options-panel'),
-        repeatsInput: document.getElementById('repeats-input'),
         modeSwitch: document.getElementById('mode-switch'),
         genTypeSwitch: document.getElementById('gen-type-switch'),
-        // Custom slider elements
         customSlider: {
             container: document.getElementById('custom-slider-container'),
             fill: document.getElementById('custom-slider-fill'),
             valueText: document.getElementById('custom-slider-value'),
-            maxText: document.getElementById('custom-slider-max'),
             hiddenInput: document.getElementById('max-words-value'),
         },
     };
 
-    // Set logo source and click listener
     const logoSrc = await window.electronAPI.getPatreonLogo();
     if (logoSrc) DOMElements.patreonLogo.src = logoSrc;
     else DOMElements.patreonLogo.style.display = 'none';
     DOMElements.patreonLogo.addEventListener('click', () => window.electronAPI.openPatreonLink());
 
-    // Set app icon sources
     const iconSrc = await window.electronAPI.getAppIcon();
     if (iconSrc) {
         DOMElements.appIcon.src = iconSrc;
         DOMElements.appIcon.addEventListener('click', () => window.electronAPI.openMainLink());
-        // REMOVED: Logic for modelButtonIcon
     } else {
         DOMElements.appIcon.style.display = 'none';
-        // REMOVED: Logic for modelButtonIcon
     }
 
     // --- Custom Titlebar Controls ---
@@ -420,13 +412,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
 
-    // Setup switch components
     function setupSwitches() {
         document.querySelectorAll('.switch-container').forEach(container => {
             const glider = container.querySelector('.switch-glider');
             const initialActive = container.querySelector('.switch-option.active');
 
-            // Set initial position of glider
             if (glider && initialActive) {
                 glider.style.width = `${initialActive.offsetWidth}px`;
                 glider.style.left = `${initialActive.offsetLeft}px`;
@@ -436,17 +426,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const clickedOption = e.target.closest('.switch-option');
                 if (!clickedOption || clickedOption.classList.contains('active')) return;
 
-                // Move glider
                 if (glider) {
                     glider.style.width = `${clickedOption.offsetWidth}px`;
                     glider.style.left = `${clickedOption.offsetLeft}px`;
                 }
 
-                // Update active class
                 container.querySelector('.switch-option.active')?.classList.remove('active');
                 clickedOption.classList.add('active');
 
-                // Handle mode-specific UI changes
                 if (container.id === 'mode-switch') {
                     if (appState.isRunning) {
                         DOMElements.statusOutput.value = 'Please wait until the current process finishes.';
@@ -480,7 +467,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupSwitches();
     updateStartButtonState();
 
-    // Prevent the browser/electron default "navigate to file" behavior on drop.
     window.addEventListener('dragover', (event) => {
         event.preventDefault();
     });
@@ -489,7 +475,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.addEventListener('resize', () => {
-        // Also reset glider position on resize to handle layout changes
         document.querySelectorAll('.switch-container').forEach(container => {
             const glider = container.querySelector('.switch-glider');
             const activeOption = container.querySelector('.switch-option.active');
@@ -579,9 +564,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     DOMElements.openFolderSingle.addEventListener('click', () => window.electronAPI.openOutputFolder());
     DOMElements.openFolderBatch.addEventListener('click', () => window.electronAPI.openOutputFolder());
 
-    // --- **CORRECTED**: Add listener for pasting images with Ctrl+V ---
     window.addEventListener('paste', async (event) => {
-        // Only allow pasting in 'Single Image' mode.
         const isSingleMode = document.querySelector('#mode-switch .switch-option.active').dataset.value === 'Single Image';
         if (!isSingleMode) {
             return;
@@ -592,22 +575,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         for (const item of items) {
             if (item.type.startsWith('image/')) {
                 imageFile = item.getAsFile();
-                break; // Found an image, stop searching
+                break;
             }
         }
 
         if (imageFile) {
-            event.preventDefault(); // Prevent the browser's default paste behavior.
+            event.preventDefault();
 
             try {
-                // Read the file object from the clipboard into a standard ArrayBuffer.
                 const arrayBuffer = await imageFile.arrayBuffer();
-
-                // Send the ArrayBuffer directly to the main process.
-                // DO NOT use Node.js `Buffer` here.
                 const newPath = await window.electronAPI.handlePastedImage(arrayBuffer);
 
-                // Use the existing function to update the UI with the new image.
                 if (newPath) {
                     await handleFileSelection(newPath);
                 }
@@ -636,14 +614,15 @@ async function startGenerationFlow() {
     if (appState.selectedModelKey === 'Custom (LM Studio)') {
         const result = await window.electronAPI.checkLmStudioConnection();
         if (!result.success) {
-            updateLmStudioUI(false, result.error);
+            updateLmStudioUI(false);
             alert("Connection to LM Studio lost. Please ensure LM Studio is running and retry connection.");
             return;
         }
-        stopLmStudioHeartbeat(); // Stop polling during active generation to prevent VRAM fragmentation
+        stopLmStudioHeartbeat();
     }
 
     setRunningState(true);
+    showGenerationStartupStatus(appState.selectedModelKey);
 
     const options = {
         mode: currentMode,
@@ -674,7 +653,7 @@ async function startGenerationFlow() {
                 DOMElements.batchGalleryOutput.appendChild(img);
             });
         }
-    } else { // Single Image mode
+    } else {
         DOMElements.batchGalleryOutput.style.display = 'none';
         DOMElements.singleImageOutput.style.display = 'block';
         if (outputFiles && outputFiles.length > 0) {
@@ -746,7 +725,7 @@ window.electronAPI.onGenerationComplete(async () => {
     }
 
     if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        startLmStudioHeartbeat(); // Resume polling after generation
+        startLmStudioHeartbeat();
     }
 
     setRunningState(false);
@@ -761,7 +740,7 @@ window.electronAPI.onGenerationError(message => {
     DOMElements.statusOutput.value = `ERROR: \n${message}`;
     setRunningState(false);
     if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        startLmStudioHeartbeat(); // Resume polling after error
+        startLmStudioHeartbeat();
     }
 });
 
@@ -770,7 +749,7 @@ window.electronAPI.onGenerationStopped(() => {
     setRunningState(false);
     DOMElements.statusOutput.value += '\nStop requested by user...';
     if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        startLmStudioHeartbeat(); // Resume polling after stop
+        startLmStudioHeartbeat();
     }
 });
 
@@ -811,12 +790,12 @@ async function handleDeleteClick(event) {
         if (result.success) {
             DOMElements.statusOutput.value = `Successfully deleted ${modelKey}.`;
             if (appState.selectedModelKey === modelKey) {
-                appState.selectedModelKey = null; // Invalidate selection
+                appState.selectedModelKey = null;
             }
         } else {
             DOMElements.statusOutput.value = `Error deleting ${modelKey}: ${result.message}`;
         }
-        await populateModelList(); // Refresh the list
+        await populateModelList();
     }
 }
 
@@ -852,7 +831,7 @@ window.electronAPI.onDownloadProgress(data => {
 window.electronAPI.onDownloadComplete(async (data) => {
     DOMElements.statusOutput.value = `Download complete for ${data.modelKey}! Ready to use.`;
     appState.activeDownloads.delete(data.modelKey);
-    appState.selectedModelKey = data.modelKey; // Automatically select the newly downloaded model
+    appState.selectedModelKey = data.modelKey;
     await populateModelList();
 });
 
@@ -862,10 +841,7 @@ window.electronAPI.onDownloadError(async (data) => {
     await populateModelList();
 });
 
-
-// REMOVED: handleLmStudioConnectClick is now handled by startLmStudioHeartbeat auto-check
-
-function updateLmStudioUI(connected, error = null) {
+function updateLmStudioUI(connected) {
     const statusSpan = document.getElementById('lm-studio-status');
     if (!statusSpan) return;
 
@@ -875,15 +851,10 @@ function updateLmStudioUI(connected, error = null) {
         statusSpan.className = 'model-status-text connected';
     } else {
         appState.lmStudioConnected = false;
-        // Cycle dots (1 -> 2 -> 3 -> 1)
         appState.lmStudioDotCount = (appState.lmStudioDotCount % 3) + 1;
         const dots = '.'.repeat(appState.lmStudioDotCount);
         statusSpan.innerHTML = `• Searching<span class="searching-dots">${dots}</span>`;
         statusSpan.className = 'model-status-text searching';
-        if (error) {
-             // Only log to status output if it's a real selection attempt or meaningful error
-             // (We don't want to spam the log every 1s)
-        }
     }
 }
 
@@ -895,7 +866,7 @@ function startLmStudioHeartbeat() {
 
     const check = async () => {
         const result = await window.electronAPI.checkLmStudioConnection();
-        updateLmStudioUI(result.success, result.error);
+        updateLmStudioUI(result.success);
         
         const nextInterval = appState.lmStudioConnected ? 5000 : 1000;
         appState.lmStudioHeartbeatInterval = setTimeout(check, nextInterval);

@@ -7,7 +7,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from utils import send_json_message, encode_image, format_tags
+from utils import send_json_message
 from lm_studio_backend import run_lm_studio_generation
 from koboldcpp_backend import run_koboldcpp_generation
 
@@ -18,7 +18,7 @@ def main():
         
         input_dir, output_dir, config_path, koboldcpp_exe, models_dir, desired_model_key, \
         low_vram_str, gen_type, trigger_words, single_paragraph_str, max_words_str, \
-        prompt_enrichment, mode = sys.argv[1:14]
+        prompt_enrichment, _mode = sys.argv[1:14]
 
         shared_params = {
             "input_dir": input_dir, 
