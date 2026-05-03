@@ -2,9 +2,9 @@
 
 Experience the next evolution of dataset creation with **Caption Creator**. This fast, fully portable GUI tool is designed to generate exceptional image captions and tags with unparalleled ease. It's the ultimate assistant for creating high-quality datasets, perfect for both LoRA training and advanced image prompting.
 
-Official Website: **[caption-creator.merserk.com](https://caption-creator.merserk.com)**
-
 The application runs entirely on your local machine, ensuring privacy and uncensored output.
+
+Official Website: **[caption-creator.merserk.com](https://caption-creator.merserk.com)**
 
 Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/MM744)**
 
