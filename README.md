@@ -1,5 +1,10 @@
 # Caption Creator
 
+[![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
+[![Python](https://img.shields.io/badge/Python-3.13.13-3776AB?style=flat-square&logo=python)](https://www.python.org/)
+![Portable](https://img.shields.io/badge/Type-Portable-success?style=flat-square)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://opensource.org/licenses/MIT)
+
 Experience the next evolution of dataset creation with **Caption Creator**. This fast, fully portable GUI tool is designed to generate exceptional image captions and tags with unparalleled ease. It's the ultimate assistant for creating high-quality datasets, perfect for both LoRA training and advanced image prompting.
 
 The application runs entirely on your local machine, ensuring privacy and uncensored output.
