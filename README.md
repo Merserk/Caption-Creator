@@ -87,7 +87,7 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 
 ## Output Example
 
-**Captions (Format as Single Paragraph enabled):**
+**Captions:**
 
 > The image is a digital illustration of a female character from the video game "Street Fighter II." She has blonde hair styled in two braids, each tied with red ribbons. Her skin tone is fair, and she has blue eyes that are focused intently forward. She wears a red beret hat with a white button on the front center, a green sleeveless tank top, and red fingerless gloves. Her right arm is extended forward, her fist clenched as if preparing for a punch or throwing a punch... The entire image conveys a sense of strength and readiness for combat.
 
