@@ -1,5 +1,6 @@
 # Caption Creator
 
+[![Downloads](https://img.shields.io/github/downloads/Merserk/Caption-Creator/total.svg?style=for-the-badge)](https://github.com/Merserk/Caption-Creator/releases)
 [![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.13.13-3776AB?style=flat-square&logo=python)](https://www.python.org/)
 ![Portable](https://img.shields.io/badge/Type-Portable-success?style=flat-square)
