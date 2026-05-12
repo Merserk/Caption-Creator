@@ -6,7 +6,7 @@
 ![Portable](https://img.shields.io/badge/Type-Portable-success?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://opensource.org/licenses/MIT)
 
-**Caption Creator** is a simple Windows app that helps you create text for images. It can write natural captions or clean comma-separated tags, so it is useful for image datasets, LoRA training, AI image prompting, or organizing image folders.
+**Caption Creator** is a app that helps you create text for images. It can write natural captions or clean comma-separated tags, so it is useful for image datasets, LoRA training, AI image prompting, or organizing image folders.
 
 The app runs on your own computer. Your images stay local, and you can use either the built-in local models or your own model through LM Studio.
 
