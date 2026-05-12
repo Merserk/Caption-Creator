@@ -73,5 +73,3 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 
 6.  **Get Results**  
     Processed images and their corresponding `.txt` files are saved in the `output` folder, neatly organized by run.
-
----
