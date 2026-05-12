@@ -32,7 +32,6 @@ const binRoot = path.join(projectRoot, 'bin');
 const assetsRoot = path.join(projectRoot, 'assets');
 const configPath = path.join(projectRoot, 'config_koboldcpp.ini');
 const lmStudioConfigPath = path.join(projectRoot, 'config_lm_studio.ini');
-const qualityPromptPath = path.join(projectRoot, 'quality-prompt-instruction.ini');
 
 const appExecRoot = isDev ? projectRoot : path.dirname(app.getPath('exe'));
 
@@ -166,7 +165,6 @@ app.whenReady().then(() => {
 
     ensureConfigExists(configPath, 'KoboldCpp');
     ensureConfigExists(lmStudioConfigPath, 'LM Studio');
-    ensureConfigExists(qualityPromptPath, 'Quality Prompt');
 
     createWindow();
 });
@@ -326,6 +324,7 @@ ipcMain.on('begin-python-process', (event, options) => {
     ];
 
     backendProcess = spawn(PYTHON_EXE, args, { shell: false });
+    let backendHadDetailedError = false;
 
     const eventTypeMap = {
         'status': 'status-update',
@@ -340,20 +339,24 @@ ipcMain.on('begin-python-process', (event, options) => {
                 const json = JSON.parse(line);
                 const eventName = eventTypeMap[json.type];
                 if (eventName) {
+                    if (json.type === 'error') backendHadDetailedError = true;
                     mainWindow.webContents.send(eventName, json.message || json.data);
                 }
             } catch (e) { console.log(`[Python STDOUT]: ${line}`); }
         });
     });
 
-    backendProcess.stderr.on('data', (data) => mainWindow.webContents.send('generation-error', data.toString()));
+    backendProcess.stderr.on('data', (data) => {
+        backendHadDetailedError = true;
+        mainWindow.webContents.send('generation-error', data.toString());
+    });
 
     backendProcess.on('close', async (code) => {
         if (code === 0) {
             mainWindow.webContents.send('generation-complete');
             if (options.shutdown_pc) handleShutdown();
             else if (!options.keep_model_loaded) await stopAllBackendProcesses();
-        } else if (backendProcess) {
+        } else if (backendProcess && !backendHadDetailedError) {
             mainWindow.webContents.send('generation-error', `Process exited with non-zero code: ${code}.`);
         }
         backendProcess = null;

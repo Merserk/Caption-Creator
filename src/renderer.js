@@ -23,6 +23,34 @@ function formatSeconds(seconds) {
     return `${minutes}m ${remainingSeconds}s`;
 }
 
+const MODEL_DISPLAY_NAMES = {
+    '6GB VRAM (E2B Q4_K_P)': '6GB VRAM AI Model',
+    '8GB VRAM (E4B Q4_K_P)': '8GB VRAM AI Model',
+    '10GB+ VRAM (E4B Q8_K_P)': '10GB VRAM AI Model',
+};
+
+function getModelDisplayName(modelKey) {
+    return MODEL_DISPLAY_NAMES[modelKey] || modelKey || '';
+}
+
+function getDownloadItemDisplayName(data = {}) {
+    const modelName = (data.model_name || '').toLowerCase();
+    const message = (data.message || '').toLowerCase();
+
+    if (modelName.includes('vision projector') || message.includes('vision projector') || message.includes('mmproj-')) {
+        return 'Vision Projector';
+    }
+
+    return getModelDisplayName(data.modelKey);
+}
+
+function formatDownloadStatusMessage(data = {}) {
+    const itemName = getDownloadItemDisplayName(data);
+    return String(data.message || '')
+        .replace(/mmproj-Gemma-4-[^\s]+?\.gguf/gi, 'Vision Projector')
+        .replace(/Gemma-4-[^\s]+?\.gguf/gi, itemName);
+}
+
 function clearStatusAnimation() {
     if (appState.statusAnimationInterval) {
         clearInterval(appState.statusAnimationInterval);
@@ -162,14 +190,11 @@ function updateModelStatusTexts() {
         const statusEl = item.querySelector('.model-status-text');
         if (!statusEl) return;
 
-        if (statusEl.dataset.originalStatus) {
-            statusEl.innerHTML = statusEl.dataset.originalStatus;
-            statusEl.className = 'model-status-text';
-        }
+        if (appState.activeDownloads.has(modelKey)) return;
 
-        if (modelKey === appState.selectedModelKey) {
-            statusEl.innerHTML = '(Current)';
-            statusEl.classList.add('current');
+        if (statusEl.dataset.originalStatus !== undefined) {
+            statusEl.textContent = statusEl.dataset.originalStatus;
+            statusEl.className = 'model-status-text';
         }
     });
 }
@@ -196,7 +221,8 @@ async function populateModelList() {
 
         const label = document.createElement('label');
         label.htmlFor = input.id;
-        label.append(model.key);
+        const displayName = getModelDisplayName(model.key);
+        label.append(displayName);
 
         itemContainer.appendChild(input);
         itemContainer.appendChild(label);
@@ -219,13 +245,13 @@ async function populateModelList() {
             statusText.id = `status-${model.key.replace(/[\s().]/g, '')}`;
 
             if (model.available) {
-                const availableHTML = `(<span class="available-text">Available</span>)`;
-                statusText.innerHTML = availableHTML;
-                statusText.dataset.originalStatus = availableHTML;
+                statusText.textContent = '';
+                statusText.dataset.originalStatus = '';
                 const deleteButton = document.createElement('button');
-                deleteButton.innerHTML = '🗑️';
+                deleteButton.textContent = 'Delete';
+                deleteButton.setAttribute('aria-label', `Delete ${displayName}`);
                 deleteButton.className = 'delete-button';
-                deleteButton.title = `Delete ${model.key}`;
+                deleteButton.title = `Delete ${displayName}`;
                 deleteButton.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handleDeleteClick(e);
@@ -233,17 +259,18 @@ async function populateModelList() {
                 itemContainer.appendChild(statusText);
                 itemContainer.appendChild(deleteButton);
             } else {
-                const notDownloadedText = '(Not Downloaded)';
-                statusText.textContent = notDownloadedText;
-                statusText.dataset.originalStatus = notDownloadedText;
+                statusText.textContent = '';
+                statusText.dataset.originalStatus = '';
                 const downloadButton = document.createElement('button');
-                downloadButton.innerHTML = '📥';
+                downloadButton.textContent = 'Download';
+                downloadButton.setAttribute('aria-label', `Download ${displayName}`);
                 downloadButton.className = 'download-button';
-                downloadButton.title = `Download ${model.key}`;
+                downloadButton.title = `Download ${displayName}`;
 
                 if (appState.activeDownloads.has(model.key)) {
                     downloadButton.disabled = true;
-                    statusText.textContent = '(Downloading...)';
+                    downloadButton.textContent = 'Downloading...';
+                    statusText.textContent = 'Downloading...';
                 } else {
                     downloadButton.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -266,7 +293,7 @@ async function populateModelList() {
         itemContainer.addEventListener('click', () => {
             if (input.disabled) return;
             appState.selectedModelKey = model.key;
-            selectedModelValue.textContent = model.key;
+            selectedModelValue.textContent = getModelDisplayName(model.key);
             document.querySelectorAll('.model-selector-item.is-selected').forEach(el => el.classList.remove('is-selected'));
             itemContainer.classList.add('is-selected');
             DOMElements.modelSelectModalOverlay.classList.remove('is-visible');
@@ -278,7 +305,7 @@ async function populateModelList() {
     if (!appState.selectedModelKey) {
         appState.selectedModelKey = firstAvailableModel;
     }
-    selectedModelValue.textContent = appState.selectedModelKey || 'No models available';
+    selectedModelValue.textContent = appState.selectedModelKey ? getModelDisplayName(appState.selectedModelKey) : 'No models available';
     if (appState.selectedModelKey) {
         const selectedItem = modelOptionsPanel.querySelector(`.model-selector-item[data-model-key="${appState.selectedModelKey}"]`);
         if (selectedItem) selectedItem.classList.add('is-selected');
@@ -769,7 +796,7 @@ async function handleDownloadClick(event) {
     appState.activeDownloads.add(modelKey);
 
     const statusEl = document.getElementById(`status-${modelKey.replace(/[\s().]/g, '')}`);
-    if (statusEl) statusEl.textContent = '(Starting...)';
+    if (statusEl) statusEl.textContent = 'Starting...';
 
     try {
         await window.electronAPI.downloadModel(modelKey);
@@ -782,18 +809,19 @@ async function handleDeleteClick(event) {
     const button = event.currentTarget;
     const modelKey = button.closest('.model-selector-item').dataset.modelKey;
 
-    const confirmed = confirm(`Are you sure you want to delete the model "${modelKey}"?\nThis action cannot be undone.`);
+    const displayName = getModelDisplayName(modelKey);
+    const confirmed = confirm(`Are you sure you want to delete the model "${displayName}"?\nThis action cannot be undone.`);
 
     if (confirmed) {
-        DOMElements.statusOutput.value = `Deleting ${modelKey}...`;
+        DOMElements.statusOutput.value = `Deleting ${displayName}...`;
         const result = await window.electronAPI.deleteModel(modelKey);
         if (result.success) {
-            DOMElements.statusOutput.value = `Successfully deleted ${modelKey}.`;
+            DOMElements.statusOutput.value = `Successfully deleted ${displayName}.`;
             if (appState.selectedModelKey === modelKey) {
                 appState.selectedModelKey = null;
             }
         } else {
-            DOMElements.statusOutput.value = `Error deleting ${modelKey}: ${result.message}`;
+            DOMElements.statusOutput.value = `Error deleting ${displayName}: ${result.message}`;
         }
         await populateModelList();
     }
@@ -801,14 +829,17 @@ async function handleDeleteClick(event) {
 
 window.electronAPI.onDownloadStatus(data => {
     const statusEl = document.getElementById(`status-${data.modelKey.replace(/[\s().]/g, '')}`);
-    if (statusEl) statusEl.textContent = `(${data.message})`;
-    DOMElements.statusOutput.value = `[${data.modelKey}] ${data.message}`;
+    const title = getDownloadItemDisplayName(data);
+    const message = formatDownloadStatusMessage(data);
+
+    if (statusEl) statusEl.textContent = message;
+    DOMElements.statusOutput.value = `[${title}] ${message}`;
 });
 
 window.electronAPI.onDownloadProgress(data => {
     clearStatusAnimation();
     const progressContainer = document.getElementById(`progress-${data.modelKey.replace(/[\s().]/g, '')}`);
-    const progressBar = progressContainer.querySelector('.progress-bar-inline');
+    const progressBar = progressContainer?.querySelector('.progress-bar-inline');
     const statusEl = document.getElementById(`status-${data.modelKey.replace(/[\s().]/g, '')}`);
 
     if (progressBar) {
@@ -816,27 +847,29 @@ window.electronAPI.onDownloadProgress(data => {
         progressBar.style.width = `${data.percentage}%`;
     }
     if (statusEl) {
-        statusEl.textContent = `(Downloading ${Math.round(data.percentage)}%)`;
+        statusEl.textContent = `Downloading ${Math.round(data.percentage)}%`;
     }
 
     const speed = data.speed_mbps.toFixed(2);
     const downloaded = data.downloaded_mb.toFixed(1);
     const total = data.total_mb.toFixed(1);
     const eta = formatSeconds(data.eta_s);
+    const title = getDownloadItemDisplayName(data);
 
-    const statusString = `${data.model_name} | ${Math.round(data.percentage)}% | ${speed} MB/s | ${downloaded}/${total} MB | ETA: ${eta}`;
-    DOMElements.statusOutput.value = statusString;
+    DOMElements.statusOutput.value = `${title} | ${Math.round(data.percentage)}% | ${speed} MB/s | ${downloaded}/${total} MB | ETA: ${eta}`;
 });
 
 window.electronAPI.onDownloadComplete(async (data) => {
-    DOMElements.statusOutput.value = `Download complete for ${data.modelKey}! Ready to use.`;
+    const displayName = getModelDisplayName(data.modelKey);
+    DOMElements.statusOutput.value = `Download complete for ${displayName}! Ready to use.`;
     appState.activeDownloads.delete(data.modelKey);
     appState.selectedModelKey = data.modelKey;
     await populateModelList();
 });
 
 window.electronAPI.onDownloadError(async (data) => {
-    DOMElements.statusOutput.value = `ERROR downloading ${data.modelKey}: \n${data.message}`;
+    const displayName = getModelDisplayName(data.modelKey);
+    DOMElements.statusOutput.value = `ERROR downloading ${displayName}: \n${data.message}`;
     appState.activeDownloads.delete(data.modelKey);
     await populateModelList();
 });
@@ -847,13 +880,13 @@ function updateLmStudioUI(connected) {
 
     if (connected) {
         appState.lmStudioConnected = true;
-        statusSpan.textContent = '✓ Connected';
+        statusSpan.textContent = 'Connected';
         statusSpan.className = 'model-status-text connected';
     } else {
         appState.lmStudioConnected = false;
         appState.lmStudioDotCount = (appState.lmStudioDotCount % 3) + 1;
         const dots = '.'.repeat(appState.lmStudioDotCount);
-        statusSpan.innerHTML = `• Searching<span class="searching-dots">${dots}</span>`;
+        statusSpan.innerHTML = `Searching<span class="searching-dots">${dots}</span>`;
         statusSpan.className = 'model-status-text searching';
     }
 }

@@ -356,6 +356,11 @@ body {
     color: var(--text-color-dark) !important;
 }
 
+
+.modal-panel .model-selector-item.is-selected .model-status-text.connected {
+    color: var(--accent-success) !important;
+}
+
 .modal-close-button {
     position: absolute;
     top: -15px;
@@ -831,18 +836,24 @@ label {
 
 .model-selector-item label {
     margin-bottom: 0;
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .model-status-text {
+    flex: 0 0 auto;
     font-size: 0.9em;
     color: #ccc;
-    margin-left: 4px;
-    font-weight: bold;
+    margin-left: 8px;
+    font-weight: 700;
     white-space: nowrap;
+}
+
+.model-status-text:empty {
+    display: none;
 }
 
 .model-status-text.connected,
@@ -878,42 +889,66 @@ label {
 .download-button,
 .connect-button,
 .delete-button {
-    background: var(--interface-color);
+    flex: 0 0 auto;
+    min-width: 86px;
+    background: #3a3a3a;
     color: var(--text-color);
-    border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 0.8em;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    padding: 7px 12px;
+    font-size: 0.82em;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
     cursor: pointer;
-    margin-left: auto;
-    transition: all 0.2s ease;
+    margin-left: 8px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
 .download-button:hover,
 .connect-button:hover {
-    background: #555;
+    background: #505050;
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+}
+
+.delete-button {
+    min-width: 72px;
+    background-color: var(--accent-danger);
+    border-color: var(--accent-danger);
+    color: #fff;
+}
+
+.modal-panel .model-selector-item.is-selected .delete-button {
+    background-color: var(--accent-danger) !important;
+    border-color: var(--accent-danger) !important;
+    color: #fff !important;
 }
 
 .delete-button:hover {
-    background-color: var(--accent-danger);
-    color: white;
+    background-color: #ff5a50;
+    border-color: #ff5a50;
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 .download-button:disabled,
 .connect-button:disabled,
 .delete-button:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: 0.55;
+    transform: none;
 }
 
 .progress-container-inline {
+    flex: 0 0 auto;
     background-color: var(--input-background-fill);
     border-radius: 4px;
     overflow: hidden;
     height: 8px;
     display: none;
     width: 180px;
-    margin-left: auto;
+    margin-left: 8px;
 }
 
 .progress-bar-inline {

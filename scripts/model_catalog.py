@@ -17,7 +17,7 @@ class ModelBundle:
 
 
 E2B_VISION_MODEL = ModelFile(
-    "Gemma 4 E2B Vision Projector",
+    "Vision Projector",
     "mmproj-Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-f16.gguf",
     "https://huggingface.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive/resolve/main/mmproj-Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-f16.gguf",
     986,
@@ -25,7 +25,7 @@ E2B_VISION_MODEL = ModelFile(
 )
 
 E4B_VISION_MODEL = ModelFile(
-    "Gemma 4 E4B Vision Projector",
+    "Vision Projector",
     "mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16.gguf",
     "https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive/resolve/main/mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16.gguf",
     990,
@@ -35,7 +35,7 @@ E4B_VISION_MODEL = ModelFile(
 MODEL_BUNDLES = {
     "6GB VRAM (E2B Q4_K_P)": ModelBundle(
         model=ModelFile(
-            "Gemma 4 E2B Q4_K_P",
+            "6GB VRAM AI Model",
             "Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
             "https://huggingface.co/HauhauCS/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive/resolve/main/Gemma-4-E2B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
             3450,
@@ -45,7 +45,7 @@ MODEL_BUNDLES = {
     ),
     "8GB VRAM (E4B Q4_K_P)": ModelBundle(
         model=ModelFile(
-            "Gemma 4 E4B Q4_K_P",
+            "8GB VRAM AI Model",
             "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
             "https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive/resolve/main/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_P.gguf",
             5370,
@@ -55,7 +55,7 @@ MODEL_BUNDLES = {
     ),
     "10GB+ VRAM (E4B Q8_K_P)": ModelBundle(
         model=ModelFile(
-            "Gemma 4 E4B Q8_K_P",
+            "10GB VRAM AI Model",
             "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf",
             "https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive/resolve/main/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf",
             8130,

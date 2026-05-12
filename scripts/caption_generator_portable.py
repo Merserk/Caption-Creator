@@ -38,27 +38,7 @@ def main():
         prompt_captions = config.get('prompts', 'captions', fallback="")
         prompt_tags = config.get('prompts', 'tags', fallback="")
 
-        # Optional global quality instructions
-        quality_caption = ""
-        quality_tags = ""
-        quality_path = os.path.join(os.path.dirname(config_path), "quality-prompt-instruction.ini")
-        if os.path.exists(quality_path):
-            qcfg = configparser.ConfigParser()
-            qcfg.read(quality_path)
-            quality_caption = qcfg.get('quality', 'caption_instruction', fallback="").strip()
-            quality_tags = qcfg.get('quality', 'tags_instruction', fallback="").strip()
-            if not quality_caption and not quality_tags:
-                # Backward compatibility
-                quality_caption = qcfg.get('quality', 'instruction', fallback="").strip()
-                quality_tags = quality_caption
-
-        if quality_caption:
-            quality_caption = quality_caption.replace("{max_words}", str(shared_params["max_words"]))
-            prompt_captions = f"{prompt_captions} {quality_caption}".strip()
-
-        if quality_tags:
-            quality_tags = quality_tags.replace("{max_words}", str(shared_params["max_words"]))
-            prompt_tags = f"{prompt_tags} {quality_tags}".strip()
+        # Prompt text now comes only from the selected backend config.
 
         shared_params.update({
             'prompt_captions': prompt_captions, 

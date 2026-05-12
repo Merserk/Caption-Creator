@@ -1,7 +1,8 @@
 import os
-import time
-import requests
 import sys
+import time
+
+import requests
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
@@ -9,7 +10,6 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import (
     build_user_prompt,
-    calculate_output_tokens,
     clean_caption_output,
     encode_image,
     format_tags,
@@ -17,144 +17,238 @@ from utils import (
     send_json_message,
 )
 
-def _select_model_id(models):
-    for m in models:
-        if m.get("loaded_instances") and m.get("capabilities", {}).get("vision"):
-            return m["loaded_instances"][0].get("id")
+LM_HOST = 'http://127.0.0.1:1234'
 
-    for m in models:
-        if m.get("loaded_instances"):
-            return m["loaded_instances"][0].get("id")
 
-    for m in models:
-        if m.get("capabilities", {}).get("vision"):
-            return m.get("id") or m.get("key")
+def _headers():
+    headers = {'Accept': 'application/json'}
+    token = os.environ.get('LM_STUDIO_API_KEY') or os.environ.get('LM_API_TOKEN')
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    return headers
 
-    if models:
-        return models[0].get("id") or models[0].get("key")
+
+def _request_json(method, endpoint, **kwargs):
+    url = f'{LM_HOST}{endpoint}'
+    response = requests.request(method, url, headers=_headers(), **kwargs)
+    if response.status_code != 200:
+        message = response.text.strip()
+        try:
+            payload = response.json()
+            error = payload.get('error')
+            if isinstance(error, dict):
+                message = error.get('message') or message
+            elif isinstance(error, str):
+                message = error
+            elif payload.get('message'):
+                message = payload.get('message')
+        except Exception:
+            pass
+        raise RuntimeError(f'LM Studio API error {response.status_code}: {message}')
+    try:
+        return response.json()
+    except Exception as e:
+        raise RuntimeError(f'LM Studio returned invalid JSON: {e}')
+
+
+def _select_model_key(models):
+    llm_models = [m for m in models if m.get('type') in (None, 'llm')]
+
+    for model in llm_models:
+        if (model.get('loaded_instances') or []) and model.get('capabilities', {}).get('vision'):
+            return model.get('key') or model.get('id')
+
+    for model in llm_models:
+        if model.get('loaded_instances') or []:
+            return model.get('key') or model.get('id')
+
+    for model in llm_models:
+        if model.get('capabilities', {}).get('vision'):
+            return model.get('key') or model.get('id')
+
+    if llm_models:
+        return llm_models[0].get('key') or llm_models[0].get('id')
     return None
 
-def process_images_loop_lm(api_url, gen_params, model_id=None, resize_max=1120, **kwargs):
-    """Specialized loop for LM Studio with stability fixes."""
-    
+
+def _resolve_model_key(timeout=10):
+    payload = _request_json('GET', '/api/v1/models', timeout=timeout)
+    models = payload.get('models') or []
+    model_key = _select_model_key(models)
+    if not model_key:
+        raise RuntimeError('No LM Studio LLM model was found. Load a vision model in LM Studio first.')
+    return model_key
+
+
+def _build_chat_payload(model_key, prompt, data_url, context_length=0):
+    payload = {
+        'model': model_key,
+        'input': [
+            {'type': 'image', 'data_url': data_url},
+            {'type': 'text', 'content': prompt},
+        ],
+        'stream': False,
+        'store': False,
+    }
+    if context_length and int(context_length) > 0:
+        payload['context_length'] = int(context_length)
+    return payload
+
+
+def _text_from_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    if isinstance(value, list):
+        parts = [_text_from_value(item) for item in value]
+        return '\n'.join(part for part in parts if part).strip()
+    if isinstance(value, dict):
+        preferred_keys = ('content', 'text', 'message', 'output_text', 'value')
+        parts = []
+        for key in preferred_keys:
+            if key in value:
+                part = _text_from_value(value.get(key))
+                if part:
+                    parts.append(part)
+        if parts:
+            return '\n'.join(parts).strip()
+    return ''
+
+
+def _extract_message_text(payload):
+    if not isinstance(payload, dict):
+        return ''
+
+    output = payload.get('output')
+    if isinstance(output, list):
+        messages = []
+        fallback_text = []
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            item_type = item.get('type')
+            text = _text_from_value(item.get('content')) or _text_from_value(item.get('text'))
+            if item_type == 'message' and text:
+                messages.append(text)
+            elif text:
+                fallback_text.append(text)
+        if messages:
+            return '\n'.join(messages).strip()
+        if fallback_text:
+            return '\n'.join(fallback_text).strip()
+
+    for key in ('output_text', 'content', 'message', 'text'):
+        text = _text_from_value(payload.get(key))
+        if text:
+            return text
+
+    return ''
+
+
+def _summarize_response_shape(payload):
+    if not isinstance(payload, dict):
+        return type(payload).__name__
+    output = payload.get('output')
+    if isinstance(output, list):
+        types = [str(item.get('type', 'unknown')) for item in output if isinstance(item, dict)]
+        stats = payload.get('stats') if isinstance(payload.get('stats'), dict) else {}
+        return f"output item types={types}, stats={stats}"
+    return f"top-level keys={list(payload.keys())}"
+
+
+def _generate_once(model_key, prompt, data_url, timeout, context_length=0):
+    request_payload = _build_chat_payload(model_key, prompt, data_url, context_length=context_length)
+    response_payload = _request_json('POST', '/api/v1/chat', json=request_payload, timeout=timeout)
+    text = _extract_message_text(response_payload)
+    if not text:
+        raise RuntimeError(f'LM Studio returned no text content. {_summarize_response_shape(response_payload)}')
+    return text
+
+
+def process_images_loop_lm(gen_params, model_key, resize_max=1280, image_format='auto', context_length=0, request_pause_seconds=0.0, **kwargs):
     image_files = list_image_files(kwargs['input_dir'])
-    
     if not image_files:
-        raise ValueError("No images found in the input folder.")
+        raise ValueError('No images found in the input folder.')
 
     total_images = len(image_files)
     start_time = time.time()
-    
-    for i, image_file in enumerate(image_files, start=1):
-        if i > 1:
-            time.sleep(2)
-            
+    timeout = int(gen_params.get('timeout', 600))
+    context_length = int(context_length or 0)
+    request_pause_seconds = float(request_pause_seconds or 0.0)
+
+    for index, image_file in enumerate(image_files, start=1):
         input_image_path = os.path.join(kwargs['input_dir'], image_file)
-        send_json_message("status", f"Processing image {i} of {total_images}...")
-        
-        current_prompt_template = kwargs['prompt_captions'] if kwargs['gen_type'] == "captions" else kwargs['prompt_tags']
-        user_prompt_text = build_user_prompt(
-            kwargs['gen_type'],
-            current_prompt_template,
+        send_json_message('status', f'Processing image {index} of {total_images}...')
+
+        gen_type = kwargs['gen_type']
+        prompt_template = kwargs['prompt_captions'] if gen_type == 'captions' else kwargs['prompt_tags']
+        prompt = build_user_prompt(
+            gen_type,
+            prompt_template,
             kwargs['max_words'],
             kwargs.get('trigger_words', ''),
-            kwargs.get('prompt_enrichment', '')
+            kwargs.get('prompt_enrichment', ''),
         )
-        output_tokens = calculate_output_tokens(kwargs['gen_type'], kwargs['max_words'], gen_params.get("max_tokens", 900))
-        
-        base64_image = encode_image(input_image_path, resize_max=resize_max)
-        
-        payload = {
-            "model": model_id if model_id else "local-model",
-            "input": [
-                {"type": "text", "content": user_prompt_text},
-                {"type": "image", "data_url": f"data:image/jpeg;base64,{base64_image}"}
-            ],
-            "temperature": gen_params.get("temperature", 0.1),
-            "top_p": gen_params.get("top_p", 0.9),
-            "repeat_penalty": gen_params.get("repeat_penalty", 1.2),
-            "max_output_tokens": output_tokens
-        }
 
-        success = False
-        raw_output = ""
-        max_retries = 3
-        retry_delay = 5
+        base64_image, mime_type = encode_image(
+            input_image_path,
+            resize_max=resize_max,
+            image_format=image_format,
+            return_mime=True,
+        )
+        data_url = f'data:{mime_type};base64,{base64_image}'
 
-        for attempt in range(max_retries):
-            session = requests.Session()
-            try:
-                response = session.post(api_url, json=payload, timeout=180)
-                if response.status_code == 200:
-                    json_resp = response.json()
-                    output = json_resp.get("output", [])
-                    for item in output:
-                        if item.get("type") == "message":
-                            raw_output = item.get("content", "").strip()
-                            break
-                    if raw_output:
-                        success = True
-                        break
-                    else:
-                        raise ValueError("Empty output content from API")
-                else:
-                    err_msg = response.text
-                    try:
-                        err_json = response.json()
-                        err_msg = err_json.get("error", {}).get("message", err_msg)
-                    except Exception:
-                        pass
-                    raise RuntimeError(f"API Error: {err_msg}")
-            except Exception as e:
-                send_json_message("status", f"Retry {attempt+1}/{max_retries} due to: {str(e)}")
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-            finally:
-                session.close()
-        
-        if not success:
-            raise RuntimeError(f"Failed to generate for {image_file} after {max_retries} retries.")
+        raw_output = _generate_once(model_key, prompt, data_url, timeout, context_length=context_length)
 
-        if kwargs['gen_type'] == 'tags':
-            final_output = format_tags(raw_output, max_tags=min(int(kwargs['max_words']), 200), trigger_words=kwargs.get('trigger_words', ''))
+        if gen_type == 'tags':
+            final_output = format_tags(raw_output, trigger_words=kwargs.get('trigger_words', ''))
         else:
-            final_output = clean_caption_output(raw_output, kwargs['max_words'], kwargs['single_paragraph'], kwargs.get('trigger_words', ''))
+            final_output = clean_caption_output(
+                raw_output,
+                kwargs['max_words'],
+                kwargs['single_paragraph'],
+                kwargs.get('trigger_words', ''),
+            )
 
-        output_file_name = os.path.splitext(image_file)[0] + ".txt"
-        with open(os.path.join(kwargs['output_dir'], output_file_name), "w", encoding="utf-8") as f:
-            f.write(final_output)
+        output_file_name = os.path.splitext(image_file)[0] + '.txt'
+        with open(os.path.join(kwargs['output_dir'], output_file_name), 'w', encoding='utf-8') as out_file:
+            out_file.write(final_output)
 
         elapsed = time.time() - start_time
-        time_per_img = elapsed / i
-        eta = (total_images - i) * time_per_img
-        send_json_message("progress", {"current": i, "total": total_images, "percentage": (i / total_images) * 100, "elapsed": elapsed, "eta": eta, "time_per_img": time_per_img})
-        send_json_message("image-complete", {"index": i})
+        time_per_img = elapsed / index
+        eta = (total_images - index) * time_per_img
+        send_json_message('progress', {
+            'current': index,
+            'total': total_images,
+            'percentage': (index / total_images) * 100,
+            'elapsed': elapsed,
+            'eta': eta,
+            'time_per_img': time_per_img,
+        })
+        send_json_message('image-complete', {'index': index})
+        if request_pause_seconds > 0 and index < total_images:
+            time.sleep(request_pause_seconds)
+
 
 def run_lm_studio_generation(config, **kwargs):
-    send_json_message("status", "Contacting LM Studio... Resolving model ID.")
-    model_id = None
-    try:
-        resp = requests.get("http://127.0.0.1:1234/api/v1/models", timeout=5)
-        if resp.status_code == 200:
-            resp_json = resp.json()
-            data = resp_json.get("data", [])
-            if not data:
-                data = resp_json.get("models", [])
+    send_json_message('status', 'Contacting LM Studio... Resolving loaded model.')
 
-            if data:
-                model_id = _select_model_id(data)
-    except Exception as e:
-        send_json_message("status", f"Warning: Model resolution issue ({e}).")
-    
-    if not model_id:
-        model_id = "local-model"
-    
-    gen_params = {
-        "temperature": config.getfloat('generation_params', 'temperature', fallback=0.1),
-        "top_p": config.getfloat('generation_params', 'top_p', fallback=0.9),
-        "max_tokens": config.getint('generation_params', 'max_tokens', fallback=800),
-        "repeat_penalty": config.getfloat('generation_params', 'repeat_penalty', fallback=1.2)
-    }
-    
-    process_images_loop_lm("http://127.0.0.1:1234/api/v1/chat", gen_params, model_id=model_id, resize_max=1120, **kwargs)
+    timeout = config.getint('generation_params', 'timeout', fallback=600)
+    resize_max = config.getint('generation_params', 'resize_max', fallback=1280)
+    image_format = config.get('generation_params', 'image_format', fallback='auto')
+    context_length = config.getint('generation_params', 'context_length', fallback=16384)
+    request_pause_seconds = config.getfloat('generation_params', 'request_pause_seconds', fallback=0.25)
+
+    model_key = _resolve_model_key(timeout=min(timeout, 30))
+    process_images_loop_lm(
+        {'timeout': timeout},
+        model_key=model_key,
+        resize_max=resize_max,
+        image_format=image_format,
+        context_length=context_length,
+        request_pause_seconds=request_pause_seconds,
+        **kwargs,
+    )

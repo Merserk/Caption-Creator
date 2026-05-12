@@ -10,7 +10,6 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import (
     build_user_prompt,
-    calculate_output_tokens,
     clean_caption_output,
     encode_image,
     format_tags,
@@ -45,9 +44,6 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
             kwargs.get('trigger_words', ''),
             kwargs.get('prompt_enrichment', '')
         )
-        configured_max_tokens = gen_params.get("max_length", gen_params.get("max_tokens", 900))
-        output_tokens = calculate_output_tokens(kwargs['gen_type'], kwargs['max_words'], configured_max_tokens)
-        
         base64_image = encode_image(input_image_path)
         
         payload = {
@@ -66,7 +62,6 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
             "top_k": gen_params.get("top_k", 40),
             "repeat_penalty": gen_params.get("rep_pen", gen_params.get("repeat_penalty", 1.1)),
             "presence_penalty": gen_params.get("presence_penalty", gen_params.get("frequency_penalty", 0.0)),
-            "max_tokens": output_tokens,
             "stop": ["</image>", "<image>", "</caption>", "<caption>", "```"]
         }
 

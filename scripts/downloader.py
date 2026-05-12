@@ -17,12 +17,18 @@ def send_json_message(msg_type, data):
     payload = {"type": msg_type, "data": data}
     print(json.dumps(payload), flush=True)
 
-def verify_hash(file_path, expected_hash):
+def send_status_message(message, model=None):
+    data = {'message': message}
+    if model is not None:
+        data['model_name'] = model.name
+    send_json_message('status', data)
+
+def verify_hash(file_path, expected_hash, model=None):
     """Verifies the SHA-256 hash of a file."""
     if not expected_hash:
         return True
     
-    send_json_message('status', {'message': 'Verifying file integrity...'})
+    send_status_message('Verifying file integrity...', model)
     sha256_hash = hashlib.sha256()
     try:
         with open(file_path, "rb") as f:
@@ -31,13 +37,13 @@ def verify_hash(file_path, expected_hash):
         
         actual_hash = sha256_hash.hexdigest()
         if actual_hash == expected_hash:
-            send_json_message('status', {'message': 'Integrity verification successful.'})
+            send_status_message('Integrity verification successful.', model)
             return True
         else:
-            send_json_message('status', {'message': f'Integrity check failed! Expected {expected_hash}, got {actual_hash}'})
+            send_status_message(f'Integrity check failed! Expected {expected_hash}, got {actual_hash}', model)
             return False
     except Exception as e:
-        send_json_message('status', {'message': f'Error during verification: {str(e)}'})
+        send_status_message(f'Error during verification: {str(e)}', model)
         return False
 
 def download_file(model, models_dir):
@@ -49,8 +55,8 @@ def download_file(model, models_dir):
     expected_min_size = model.estimated_mb * 1024 * 1024 * 0.9
 
     if os.path.exists(dest_path) and os.path.getsize(dest_path) >= expected_min_size:
-        if verify_hash(dest_path, model.sha256):
-            send_json_message('status', {'message': f'{model.file} already exists. Skipping download.'})
+        if verify_hash(dest_path, model.sha256, model):
+            send_status_message(f'{model.file} already exists. Skipping download.', model)
             return True
         os.remove(dest_path)
 
@@ -64,13 +70,13 @@ def download_file(model, models_dir):
                 if response.status == 206:
                     content_length = int(response.getheader('Content-Length', 0))
                     total_size = downloaded + content_length
-                    send_json_message('status', {'message': f'Resuming download (Attempt {attempt+1}/{max_retries})...'})
+                    send_status_message(f'Resuming download (Attempt {attempt+1}/{max_retries})...', model)
                 elif response.status == 200:
                     total_size = int(response.getheader('Content-Length', 0))
                     if downloaded > 0:
                         downloaded = 0
                         open(dest_path, 'wb').close() 
-                    send_json_message('status', {'message': f'Starting download (Attempt {attempt+1}/{max_retries})...'})
+                    send_status_message(f'Starting download (Attempt {attempt+1}/{max_retries})...', model)
                 else:
                     raise RuntimeError(f"Unexpected server response: {response.status}")
 
@@ -112,17 +118,17 @@ def download_file(model, models_dir):
             if final_size < total_size:
                 raise ValueError(f"Final file size mismatch: {final_size} < {total_size}")
 
-            send_json_message('status', {'message': f'Successfully downloaded {model.file}.'})
+            send_status_message(f'Successfully downloaded {model.file}.', model)
             
             if model.sha256:
-                if not verify_hash(dest_path, model.sha256):
+                if not verify_hash(dest_path, model.sha256, model):
                     os.remove(dest_path)
                     raise ValueError(f"Integrity check failed for {model.file}. File has been removed.")
             
             return True
 
         except (urllib.error.URLError, ConnectionError, TimeoutError, ValueError) as e:
-            send_json_message('status', {'message': f'Download issue on attempt {attempt+1}: {str(e)}. Retrying in {retry_delay}s...'})
+            send_status_message(f'Download issue on attempt {attempt+1}: {str(e)}. Retrying in {retry_delay}s...', model)
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
                 continue
