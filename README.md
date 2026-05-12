@@ -75,29 +75,3 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
     Processed images and their corresponding `.txt` files are saved in the `output` folder, neatly organized by run.
 
 ---
-
-## Ideal For
-
--   Automating image captioning and tagging.
--   Extracting detailed prompts from existing images.
--   Creating high-quality training datasets for AI models.
--   Archiving and organizing image collections with descriptive metadata.
-
----
-
-
-## Output Example
-
-**Captions:**
-
-> The image is a digital illustration of a female character from the video game "Street Fighter II." She has blonde hair styled in two braids, each tied with red ribbons. Her skin tone is fair, and she has blue eyes that are focused intently forward. She wears a red beret hat with a white button on the front center, a green sleeveless tank top, and red fingerless gloves. Her right arm is extended forward, her fist clenched as if preparing for a punch or throwing a punch... The entire image conveys a sense of strength and readiness for combat.
-
-**Tags:**
-
-> digital art, female character, muscular build, green tank top, red beret with white button, red fingerless gloves, blonde hair in braid, intense expression, right arm extended forward, clenched teeth, dark blue gradient background, vibrant colors, anime style, strong pose, upper body, dynamic lighting, high contrast, Illustrious quality, fighting game character, Camilla (Street Fighter), serious demeanor, confident stance, athletic physique, determined look...
-
----
-
-## Tags
-
-`#caption-creator` `#dataset` `#tagging` `#portable` `#uncensored` `#batch-processing` `#gui` `#ui-ux` `#lm-studio` `#local-ai`
