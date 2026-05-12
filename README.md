@@ -6,12 +6,12 @@
 ![Portable](https://img.shields.io/badge/Type-Portable-success?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://opensource.org/licenses/MIT)
 
-Experience the next evolution of dataset creation with **Caption Creator**. This fast, fully portable GUI tool is designed to generate exceptional image captions and tags with unparalleled ease. It's the ultimate assistant for creating high-quality datasets, perfect for both LoRA training and advanced image prompting.
+**Caption Creator** is a simple Windows app that helps you create text for images. It can write natural captions or clean comma-separated tags, so it is useful for image datasets, LoRA training, AI image prompting, or organizing image folders.
 
-The application runs entirely on your local machine, ensuring privacy and uncensored output.
+The app runs on your own computer. Your images stay local, and you can use either the built-in local models or your own model through LM Studio.
 
 Official Website: **[caption-creator.merserk.com](https://caption-creator.merserk.com)**
-
+Online version: **[aitools.merserk.com/caption-creator](https://aitools.merserk.com/caption-creator)**
 Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/MM744)**
 
 ---
@@ -29,22 +29,22 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
 ## Features
 
 #### Core Functionality
--   **Dual Generation Modes:** Seamlessly switch between generating detailed **Captions** or concise, comma-separated **Tags**.
--   **Intelligent Tag Formatting:** Automatically cleans AI output for tags into a perfect, single-line, comma-separated list.
--   **Powerful Batch Processing:** Process entire folders of images with a clear, gallery-style progress view.
--   **Portable & Self-Contained:** No installation needed. Runs from a single folder with its own embedded Python.
--   **Uncensored Local AI:** Utilizes locally run models for full creative freedom without content filters.
--   **Complete UI Overhaul:** A sleek, modern, and responsive dark-theme interface.
--   **LM Studio Integration:** Connect directly to a running LM Studio instance to use any compatible model.
--   **Direct Image Pasting:** Instantly process an image by simply pasting it from your clipboard (Ctrl+V).
--   **Interactive Model Management:** Download, delete, and manage models directly from within the application.
--   **Prompt Enrichment:** Add extra context or instructions to the AI on the fly.
--   **Built-in ZIP Archiving:** Save your entire generation run into a single ZIP archive with one click.
--   **VRAM Optimization:** Choose from models tailored for different GPU VRAM capacities (6GB, 8GB, 10GB+).
--   **Low-VRAM Mode (No KV Offload):** A dedicated checkbox to avoid offloading KV Cache or scratch buffers to VRAM. This allows more model layers to fit into GPU memory but may result in a significant decrease in generation speed.
--   **Keep Model Loaded:** An option to keep the AI model in VRAM, dramatically speeding up subsequent generations.
--   **Flexible Formatting:** Use Trigger Words, define a Max Word count, and format captions as a single paragraph.
--   **Convenient Actions:** Instantly copy text to the clipboard or open the output folder from the UI.
+-   **Captions or Tags:** Choose between full image descriptions or short comma-separated tags.
+-   **Clean Tag Output:** Tags are automatically cleaned and formatted into one easy-to-copy line.
+-   **Single Image or Batch Mode:** Work with one image, or process many images in one run.
+-   **Portable App:** No full setup needed. Unpack the folder and run the app.
+-   **Local AI Option:** Use included local models so images are processed on your own computer.
+-   **Modern Dark Interface:** Clear dark UI with live status, progress, and preview panels.
+-   **LM Studio Support:** Use a model already running in LM Studio instead of the built-in model option.
+-   **Paste Images Directly:** Paste an image from your clipboard in Single Image mode with Ctrl+V.
+-   **Model Management:** Download or delete the built-in models from inside the app.
+-   **Prompt Enrichment:** Add extra instructions when you want the AI to focus on something specific.
+-   **Save as ZIP:** Package the current result folder into a ZIP file with one click.
+-   **Model Choices by GPU Memory:** Pick from 6GB, 8GB, or 10GB+ model options depending on your graphics card.
+-   **Low-VRAM Mode:** Helps the app run on lower-memory graphics cards, but generation may be slower.
+-   **Keep Model Loaded:** Keep the model ready after a run so the next generation can start faster.
+-   **Flexible Text Controls:** Add trigger words and choose the maximum caption or tag length.
+-   **Easy Result Actions:** Copy the generated text or open the output folder from the app.
 
 ---
 
@@ -57,19 +57,19 @@ Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/
     Double-click **`Caption Creator.exe`** to launch the program.
 
 3.  **Manage Your Model**
-    -   Click the "Model / VRAM Configuration" button to open the model selection panel.
-    -   **To use a built-in model:** If a model is not "Available," click the download icon (📥) next to it.
-    -   **To use LM Studio:** Select the "Custom (LM Studio)" option and click "Connect".
-    -   Select your desired model from the list to make it active.
+    -   Click the "Model / VRAM Configuration" button to open the model list.
+    -   **To use a built-in model:** Click **Download** next to the model that matches your graphics card.
+    -   **To use LM Studio:** Open LM Studio, start its local server, load a vision model, then select **Custom (LM Studio)** in Caption Creator.
+    -   Select the model you want to use.
 
 4.  **Load Image(s)**
     -   **Single Mode:** **Drag & drop** an image, **click** to browse, or **paste** an image from your clipboard.
-    -   **Batch Mode:** **Drag & drop** multiple images or **click** to select a batch.
+    -   **Batch Mode:** **Drag & drop** multiple images or **click** to select several images.
 
 5.  **Configure and Generate**
-    -   Choose your generation type (**Captions** or **Tags**).
-    -   Adjust settings like Max Words, Trigger Words.
+    -   Choose **Captions** or **Tags**.
+    -   Adjust options such as Max Words, Trigger Words, Prompt Enrichment, Low-VRAM Mode, Keep Model Loaded, or Shut down PC after generation.
     -   Click **Generate**.
 
 6.  **Get Results**  
-    Processed images and their corresponding `.txt` files are saved in the `output` folder, neatly organized by run.
+    Processed images and matching `.txt` files are saved in the `output` folder, organized by mode, date, and run number.
