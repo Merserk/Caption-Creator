@@ -11,7 +11,9 @@
 The app runs on your own computer. Your images stay local, and you can use either the built-in local models or your own model through LM Studio.
 
 Official Website: **[caption-creator.merserk.com](https://caption-creator.merserk.com)**
+
 Online version: **[aitools.merserk.com/caption-creator](https://aitools.merserk.com/caption-creator)**
+
 Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/MM744)**
 
 ---
