@@ -1,6 +1,6 @@
 {
   "name": "caption-creator",
-  "version": "9.1.0",
+  "version": "10.0.0",
   "description": "Desktop application for generating image captions and tags.",
   "main": "main.js",
   "author": "Merserk",
@@ -68,7 +68,7 @@
     }
   },
   "devDependencies": {
-    "electron": "^42.0.1",
+    "electron": "^42.2.0",
     "electron-builder": "^26.8.1"
   },
   "dependencies": {

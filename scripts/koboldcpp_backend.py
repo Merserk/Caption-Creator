@@ -10,9 +10,9 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import (
     build_user_prompt,
-    clean_caption_output,
     encode_image,
-    format_tags,
+    format_generation_output,
+    get_output_extension,
     list_image_files,
     parse_generation_params,
     send_json_message,
@@ -36,7 +36,7 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
         input_image_path = os.path.join(kwargs['input_dir'], image_file)
         send_json_message("status", f"Processing image {i} of {total_images}...")
         
-        current_prompt_template = kwargs['prompt_captions'] if kwargs['gen_type'] == "captions" else kwargs['prompt_tags']
+        current_prompt_template = kwargs['prompt_templates'][kwargs['gen_type']]
         user_prompt_text = build_user_prompt(
             kwargs['gen_type'],
             current_prompt_template,
@@ -45,6 +45,14 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
             kwargs.get('prompt_enrichment', '')
         )
         base64_image = encode_image(input_image_path)
+        stop_sequences = ["</image>", "<image>", "</caption>", "<caption>"]
+        if kwargs['gen_type'] not in ('json', 'yaml'):
+            stop_sequences.append("```")
+        max_tokens = int(gen_params.get(
+            "max_tokens",
+            gen_params.get("max_completion_tokens", gen_params.get("max_length", 4096))
+        ))
+        request_timeout = int(gen_params.get("timeout", 600))
         
         payload = {
             "model": "local-model",
@@ -62,7 +70,9 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
             "top_k": gen_params.get("top_k", 40),
             "repeat_penalty": gen_params.get("rep_pen", gen_params.get("repeat_penalty", 1.1)),
             "presence_penalty": gen_params.get("presence_penalty", gen_params.get("frequency_penalty", 0.0)),
-            "stop": ["</image>", "<image>", "</caption>", "<caption>", "```"]
+            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
+            "stop": stop_sequences
         }
 
         success = False
@@ -72,7 +82,7 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
 
         for attempt in range(max_retries):
             try:
-                response = session.post(api_url, json=payload, timeout=180)
+                response = session.post(api_url, json=payload, timeout=request_timeout)
                 if response.status_code == 200:
                     json_resp = response.json()
                     choices = json_resp.get("choices", [])
@@ -95,12 +105,15 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
         if not success:
             raise RuntimeError(f"Failed to generate for {image_file} after {max_retries} retries.")
 
-        if kwargs['gen_type'] == 'tags':
-            final_output = format_tags(raw_output, max_tags=min(int(kwargs['max_words']), 200), trigger_words=kwargs.get('trigger_words', ''))
-        else:
-            final_output = clean_caption_output(raw_output, kwargs['max_words'], kwargs['single_paragraph'], kwargs.get('trigger_words', ''))
+        final_output = format_generation_output(
+            kwargs['gen_type'],
+            raw_output,
+            kwargs['max_words'],
+            kwargs['single_paragraph'],
+            kwargs.get('trigger_words', ''),
+        )
 
-        output_file_name = os.path.splitext(image_file)[0] + ".txt"
+        output_file_name = os.path.splitext(image_file)[0] + get_output_extension(kwargs['gen_type'])
         with open(os.path.join(kwargs['output_dir'], output_file_name), "w", encoding="utf-8") as f:
             f.write(final_output)
 
@@ -123,6 +136,9 @@ def run_koboldcpp_generation(config, koboldcpp_exe, models_dir, desired_model_ke
     mmproj_file = os.path.join(models_dir, model_bundle.vision.file)
     if not os.path.exists(mmproj_file):
         raise RuntimeError(f"Vision projector not found at {mmproj_file}.")
+
+    gen_params = parse_generation_params(config)
+    context_size = int(gen_params.get("context_size", gen_params.get("contextsize", 32768)))
     
     kobold_command = [
         koboldcpp_exe, 
@@ -131,6 +147,7 @@ def run_koboldcpp_generation(config, koboldcpp_exe, models_dir, desired_model_ke
         "--quiet", 
         "--port", "5001", 
         "--host", "127.0.0.1", 
+        "--contextsize", str(context_size),
         "--jinja",
         *low_vram_flags
     ]
@@ -145,7 +162,6 @@ def run_koboldcpp_generation(config, koboldcpp_exe, models_dir, desired_model_ke
         for _ in range(60):
             try:
                 if requests.get("http://127.0.0.1:5001/api/v1/info/version", timeout=1).status_code == 200:
-                    gen_params = parse_generation_params(config)
                     process_images_loop_kobold("http://127.0.0.1:5001/v1/chat/completions", gen_params, **kwargs)
                     return
             except Exception:

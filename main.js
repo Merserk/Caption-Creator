@@ -63,6 +63,14 @@ const MODEL_MAP = {
     "10GB+ VRAM (E4B Q8_K_P)": {
         modelFile: "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf",
         visionFile: "mmproj-Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-f16.gguf"
+    },
+    "8GB VRAM (NSFW Q4_K_M)": {
+        modelFile: "nsfwvision_v5-Q4_K_M.gguf",
+        visionFile: "mmproj-nsfwvision_v5.gguf"
+    },
+    "12GB VRAM (NSFW Q8_0)": {
+        modelFile: "nsfwvision_v5-Q8_0.gguf",
+        visionFile: "mmproj-nsfwvision_v5.gguf"
     }
 };
 
@@ -579,8 +587,16 @@ ipcMain.handle('get-output-files', async () => {
 
 ipcMain.handle('get-text-content', async (event, imagePath) => {
     const filePath = url.fileURLToPath(imagePath);
-    const textPath = filePath.replace(/\.png$/i, '.txt');
-    try { return await fs.readFile(textPath, 'utf-8'); } catch { return `Text file not found.`; }
+    const basePath = filePath.replace(/\.png$/i, '');
+    const textPaths = ['.txt', '.json', '.yaml', '.yml'].map(ext => `${basePath}${ext}`);
+    for (const textPath of textPaths) {
+        try {
+            if (await fs.pathExists(textPath)) {
+                return await fs.readFile(textPath, 'utf-8');
+            }
+        } catch {}
+    }
+    return `Text file not found.`;
 });
 
 ipcMain.on('open-output-folder', () => {

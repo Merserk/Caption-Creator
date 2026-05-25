@@ -94,6 +94,17 @@ def build_user_prompt(gen_type, prompt_template, max_words, trigger_words='', pr
     return prompt
 
 
+def clean_structured_output(raw_text):
+    text = (raw_text or '').strip()
+    if text.startswith('```'):
+        lines = text.splitlines()
+        if lines and lines[0].strip().startswith('```'):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith('```'):
+            lines = lines[:-1]
+        text = '\n'.join(lines).strip()
+    return text
+
 
 def clean_caption_output(raw_text, max_words, single_paragraph=True, trigger_words=''):
     text = (raw_text or '').strip()
@@ -109,6 +120,21 @@ def format_tags(raw_text_from_ai, max_tags=None, trigger_words=''):
     if trigger:
         return f'{trigger}, {text}'.strip().rstrip(',')
     return text
+
+
+def format_generation_output(gen_type, raw_text, max_words, single_paragraph=True, trigger_words=''):
+    if gen_type == 'tags':
+        return format_tags(raw_text, max_tags=min(int(max_words), 200), trigger_words=trigger_words)
+    if gen_type in ('json', 'yaml'):
+        return clean_structured_output(raw_text)
+    return clean_caption_output(raw_text, max_words, single_paragraph, trigger_words)
+
+
+def get_output_extension(gen_type):
+    return {
+        'json': '.json',
+        'yaml': '.yaml',
+    }.get(gen_type, '.txt')
 
 
 def caption_needs_retry(clean_text, max_words):

@@ -699,6 +699,13 @@ label {
     margin-bottom: 10px;
 }
 
+#gen-type-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 48px);
+    height: 100px;
+}
+
 #single-image-preview {
     position: absolute;
     top: 0;

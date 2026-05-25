@@ -27,6 +27,8 @@ const MODEL_DISPLAY_NAMES = {
     '6GB VRAM (E2B Q4_K_P)': '6GB VRAM AI Model',
     '8GB VRAM (E4B Q4_K_P)': '8GB VRAM AI Model',
     '10GB+ VRAM (E4B Q8_K_P)': '10GB VRAM AI Model',
+    '8GB VRAM (NSFW Q4_K_M)': '8GB VRAM AI Model (NSFW)',
+    '12GB VRAM (NSFW Q8_0)': '12GB VRAM AI Model (NSFW)',
 };
 
 function getModelDisplayName(modelKey) {
@@ -439,24 +441,26 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
 
+    function updateSwitchGlider(container, activeOption) {
+        const glider = container.querySelector('.switch-glider');
+        if (!glider || !activeOption) return;
+
+        glider.style.width = `${activeOption.offsetWidth}px`;
+        glider.style.height = `${activeOption.offsetHeight}px`;
+        glider.style.left = `${activeOption.offsetLeft}px`;
+        glider.style.top = `${activeOption.offsetTop}px`;
+    }
+
     function setupSwitches() {
         document.querySelectorAll('.switch-container').forEach(container => {
-            const glider = container.querySelector('.switch-glider');
             const initialActive = container.querySelector('.switch-option.active');
-
-            if (glider && initialActive) {
-                glider.style.width = `${initialActive.offsetWidth}px`;
-                glider.style.left = `${initialActive.offsetLeft}px`;
-            }
+            updateSwitchGlider(container, initialActive);
 
             container.addEventListener('click', async (e) => {
                 const clickedOption = e.target.closest('.switch-option');
                 if (!clickedOption || clickedOption.classList.contains('active')) return;
 
-                if (glider) {
-                    glider.style.width = `${clickedOption.offsetWidth}px`;
-                    glider.style.left = `${clickedOption.offsetLeft}px`;
-                }
+                updateSwitchGlider(container, clickedOption);
 
                 container.querySelector('.switch-option.active')?.classList.remove('active');
                 clickedOption.classList.add('active');
@@ -503,12 +507,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('resize', () => {
         document.querySelectorAll('.switch-container').forEach(container => {
-            const glider = container.querySelector('.switch-glider');
             const activeOption = container.querySelector('.switch-option.active');
-            if (glider && activeOption) {
-                glider.style.width = `${activeOption.offsetWidth}px`;
-                glider.style.left = `${activeOption.offsetLeft}px`;
-            }
+            updateSwitchGlider(container, activeOption);
         });
     });
 

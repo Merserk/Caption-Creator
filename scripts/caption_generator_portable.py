@@ -35,14 +35,21 @@ def main():
             raise FileNotFoundError(f"Config file not found: {config_path}")
         config.read(config_path)
         
-        prompt_captions = config.get('prompts', 'captions', fallback="")
-        prompt_tags = config.get('prompts', 'tags', fallback="")
+        prompt_templates = {
+            'captions': config.get('prompts', 'captions', fallback=""),
+            'tags': config.get('prompts', 'tags', fallback=""),
+            'json': config.get('prompts', 'json', fallback=""),
+            'yaml': config.get('prompts', 'yaml', fallback=""),
+        }
+        if gen_type not in prompt_templates:
+            raise ValueError(f"Unknown generation type: {gen_type}")
+        if not prompt_templates[gen_type]:
+            raise ValueError(f"Missing prompt for generation type: {gen_type}")
 
         # Prompt text now comes only from the selected backend config.
 
         shared_params.update({
-            'prompt_captions': prompt_captions, 
-            'prompt_tags': prompt_tags
+            'prompt_templates': prompt_templates
         })
         
         # Routing to specialized backends

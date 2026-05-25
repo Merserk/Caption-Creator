@@ -10,9 +10,9 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import (
     build_user_prompt,
-    clean_caption_output,
     encode_image,
-    format_tags,
+    format_generation_output,
+    get_output_extension,
     list_image_files,
     send_json_message,
 )
@@ -184,7 +184,7 @@ def process_images_loop_lm(gen_params, model_key, resize_max=1280, image_format=
         send_json_message('status', f'Processing image {index} of {total_images}...')
 
         gen_type = kwargs['gen_type']
-        prompt_template = kwargs['prompt_captions'] if gen_type == 'captions' else kwargs['prompt_tags']
+        prompt_template = kwargs['prompt_templates'][gen_type]
         prompt = build_user_prompt(
             gen_type,
             prompt_template,
@@ -203,17 +203,15 @@ def process_images_loop_lm(gen_params, model_key, resize_max=1280, image_format=
 
         raw_output = _generate_once(model_key, prompt, data_url, timeout, context_length=context_length)
 
-        if gen_type == 'tags':
-            final_output = format_tags(raw_output, trigger_words=kwargs.get('trigger_words', ''))
-        else:
-            final_output = clean_caption_output(
-                raw_output,
-                kwargs['max_words'],
-                kwargs['single_paragraph'],
-                kwargs.get('trigger_words', ''),
-            )
+        final_output = format_generation_output(
+            gen_type,
+            raw_output,
+            kwargs['max_words'],
+            kwargs['single_paragraph'],
+            kwargs.get('trigger_words', ''),
+        )
 
-        output_file_name = os.path.splitext(image_file)[0] + '.txt'
+        output_file_name = os.path.splitext(image_file)[0] + get_output_extension(gen_type)
         with open(os.path.join(kwargs['output_dir'], output_file_name), 'w', encoding='utf-8') as out_file:
             out_file.write(final_output)
 
