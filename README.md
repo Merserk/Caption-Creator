@@ -9,26 +9,13 @@
 
 **Caption Creator** is a portable Windows app for generating high-quality text from images. Create captions, tags, JSON, YAML, Illustrious prompts, or fully custom outputs for image datasets, LoRA training, AI prompting, and folder organization.
 
+<img width="1201" height="750" alt="1" src="https://github.com/user-attachments/assets/9fff32a9-ce61-4e4c-afe2-8861258e4bd3" />
+
+<img width="1201" height="750" alt="2" src="https://github.com/user-attachments/assets/ec306994-3238-48b0-8b89-263ac67de6ac" />
+
 Run everything locally with built-in GGUF models, or connect your own vision model through **LM Studio** or **Ollama**. Your images stay on your computer.
 
 **[Website](https://caption-creator.merserk.com)** · **[Online Version](https://aitools.merserk.com/caption-creator)** · **[Releases](https://github.com/Merserk/Caption-Creator/releases)** · **[Patreon](https://www.patreon.com/MM744)**
-
----
-
-## Screenshots
-
-<table>
-  <tr>
-    <td width="50%">
-      <strong>Single Image Mode</strong><br>
-      <img width="1200" height="750" alt="Caption Creator single image mode" src="https://github.com/user-attachments/assets/5de2c0a1-8ae5-4425-a7a2-d829772fba45" />
-    </td>
-    <td width="50%">
-      <strong>Batch Processing Mode</strong><br>
-      <img width="1200" height="750" alt="Caption Creator batch processing mode" src="https://github.com/user-attachments/assets/cc359824-6859-4fcb-a367-b6ab1dc2f420" />
-    </td>
-  </tr>
-</table>
 
 ---
 
