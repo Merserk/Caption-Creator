@@ -1,77 +1,77 @@
 # Caption Creator
 
 [![Downloads](https://img.shields.io/github/downloads/Merserk/Caption-Creator/total.svg?style=flat-square&label=Downloads)](https://github.com/Merserk/Caption-Creator/releases)
+![Version](https://img.shields.io/badge/Version-11.0.0-111111?style=flat-square)
 [![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.13.13-3776AB?style=flat-square&logo=python)](https://www.python.org/)
 ![Portable](https://img.shields.io/badge/Type-Portable-success?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://opensource.org/licenses/MIT)
 
-**Caption Creator** is a app that helps you create text for images. It can write natural captions or clean comma-separated tags, so it is useful for image datasets, LoRA training, AI image prompting, or organizing image folders.
+**Caption Creator** is a portable Windows app for generating high-quality text from images. Create captions, tags, JSON, YAML, Illustrious prompts, or fully custom outputs for image datasets, LoRA training, AI prompting, and folder organization.
 
-The app runs on your own computer. Your images stay local, and you can use either the built-in local models or your own model through LM Studio.
+Run everything locally with built-in GGUF models, or connect your own vision model through **LM Studio** or **Ollama**. Your images stay on your computer.
 
-Official Website: **[caption-creator.merserk.com](https://caption-creator.merserk.com)**
-
-Online version: **[aitools.merserk.com/caption-creator](https://aitools.merserk.com/caption-creator)**
-
-Support the developer on Patreon: **[patreon.com/MM744](https://www.patreon.com/MM744)**
+**[Website](https://caption-creator.merserk.com)** · **[Online Version](https://aitools.merserk.com/caption-creator)** · **[Releases](https://github.com/Merserk/Caption-Creator/releases)** · **[Patreon](https://www.patreon.com/MM744)**
 
 ---
 
 ## Screenshots
 
-**Single Image Mode:**
-<img width="1200" height="750" alt="Screenshot 2026-03-20 211137" src="https://github.com/user-attachments/assets/5de2c0a1-8ae5-4425-a7a2-d829772fba45" />
-
-**Batch Processing Mode:**
-<img width="1200" height="750" alt="Screenshot 2026-03-20 215115" src="https://github.com/user-attachments/assets/cc359824-6859-4fcb-a367-b6ab1dc2f420" />
+<table>
+  <tr>
+    <td width="50%">
+      <strong>Single Image Mode</strong><br>
+      <img width="1200" height="750" alt="Caption Creator single image mode" src="https://github.com/user-attachments/assets/5de2c0a1-8ae5-4425-a7a2-d829772fba45" />
+    </td>
+    <td width="50%">
+      <strong>Batch Processing Mode</strong><br>
+      <img width="1200" height="750" alt="Caption Creator batch processing mode" src="https://github.com/user-attachments/assets/cc359824-6859-4fcb-a367-b6ab1dc2f420" />
+    </td>
+  </tr>
+</table>
 
 ---
 
-## Features
+## Highlights
 
-#### Core Functionality
--   **Captions or Tags:** Choose between full image descriptions or short comma-separated tags.
--   **Clean Tag Output:** Tags are automatically cleaned and formatted into one easy-to-copy line.
--   **Single Image or Batch Mode:** Work with one image, or process many images in one run.
--   **Portable App:** No full setup needed. Unpack the folder and run the app.
--   **Local AI Option:** Use included local models so images are processed on your own computer.
--   **Modern Dark Interface:** Clear dark UI with live status, progress, and preview panels.
--   **LM Studio Support:** Use a model already running in LM Studio instead of the built-in model option.
--   **Paste Images Directly:** Paste an image from your clipboard in Single Image mode with Ctrl+V.
--   **Model Management:** Download or delete the built-in models from inside the app.
--   **Prompt Enrichment:** Add extra instructions when you want the AI to focus on something specific.
--   **Save as ZIP:** Package the current result folder into a ZIP file with one click.
--   **Model Choices by GPU Memory:** Pick from 6GB, 8GB, or 10GB+ model options depending on your graphics card.
--   **Low-VRAM Mode:** Helps the app run on lower-memory graphics cards, but generation may be slower.
--   **Keep Model Loaded:** Keep the model ready after a run so the next generation can start faster.
--   **Flexible Text Controls:** Add trigger words and choose the maximum caption or tag length.
--   **Easy Result Actions:** Copy the generated text or open the output folder from the app.
+- **Multiple output types:** Captions, Tags, JSON, YAML, Illustrious, and Custom prompts.
+- **Single or batch workflow:** Process one image, many images, or queue multiple jobs.
+- **Local-first generation:** Use bundled models, LM Studio, or Ollama vision models.
+- **Model management:** Download, select, delete, load, and eject models from the app.
+- **Professional workflow controls:** Max words, trigger words, prompt enrichment, Low-VRAM mode, custom output folder, and original filename preservation.
+- **Fast result actions:** Copy output, open the run folder, or export the current run as a ZIP archive.
+- **Modern desktop UI:** Frameless dark interface with live status, progress, previews, gallery output, and an About panel.
+
+---
+
+## Model Options
+
+| Option | Best for |
+| --- | --- |
+| **6GB VRAM (E2B Q4_K_P)** | Smaller GPUs and lighter local runs |
+| **8GB VRAM (E4B Q4_K_P)** | Balanced local captioning and tagging |
+| **10GB+ VRAM (E4B Q8_K_P)** | Higher-quality local generation |
+| **8GB VRAM (NSFW Q4_K_M)** | NSFW-focused local generation |
+| **12GB VRAM (NSFW Q8_0)** | Higher-quality NSFW-focused local generation |
+| **Custom (LM Studio)** | Any compatible local vision model served by LM Studio |
+| **Custom (Ollama)** | Any compatible local vision model served by Ollama |
 
 ---
 
 ## How to Use
 
-1.  **Download and Unpack**  
-    Download the program and unpack the `.zip` archive into a folder.
+1. **Download and unpack** the latest release.
+2. Launch **`Caption Creator.exe`**.
+3. Open **Model / VRAM Configuration**.
+   - Download a built-in model that matches your GPU, or
+   - choose **Custom (LM Studio)** / **Custom (Ollama)** and select a running vision model.
+4. Choose **Single Image** or **Batch Processing**, then add images by clicking, dragging, or pasting in Single Image mode.
+5. Pick an output type: **Captions**, **Tags**, **JSON**, **YAML**, **Illustrious**, or **Custom**.
+6. Adjust optional settings, then click **Generate** or add the job to the **Queue**.
+7. Copy the result, open the output folder, or save the run as a ZIP archive.
 
-2.  **Launch the Application**  
-    Double-click **`Caption Creator.exe`** to launch the program.
+---
 
-3.  **Manage Your Model**
-    -   Click the "Model / VRAM Configuration" button to open the model list.
-    -   **To use a built-in model:** Click **Download** next to the model that matches your graphics card.
-    -   **To use LM Studio:** Open LM Studio, start its local server, load a vision model, then select **Custom (LM Studio)** in Caption Creator.
-    -   Select the model you want to use.
+## License
 
-4.  **Load Image(s)**
-    -   **Single Mode:** **Drag & drop** an image, **click** to browse, or **paste** an image from your clipboard.
-    -   **Batch Mode:** **Drag & drop** multiple images or **click** to select several images.
-
-5.  **Configure and Generate**
-    -   Choose **Captions** or **Tags**.
-    -   Adjust options such as Max Words, Trigger Words, Prompt Enrichment, Low-VRAM Mode, Keep Model Loaded, or Shut down PC after generation.
-    -   Click **Generate**.
-
-6.  **Get Results**  
-    Processed images and matching `.txt` files are saved in the `output` folder, organized by mode, date, and run number.
+MIT License. See the repository license for details.
