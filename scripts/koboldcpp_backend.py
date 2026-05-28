@@ -10,12 +10,13 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import (
     build_user_prompt,
+    build_progress_payload,
     encode_image,
     format_generation_output,
-    get_output_extension,
     list_image_files,
     parse_generation_params,
     send_json_message,
+    write_generation_output,
 )
 from model_catalog import get_model_bundle
 
@@ -113,14 +114,8 @@ def process_images_loop_kobold(api_url, gen_params, **kwargs):
             kwargs.get('trigger_words', ''),
         )
 
-        output_file_name = os.path.splitext(image_file)[0] + get_output_extension(kwargs['gen_type'])
-        with open(os.path.join(kwargs['output_dir'], output_file_name), "w", encoding="utf-8") as f:
-            f.write(final_output)
-
-        elapsed = time.time() - start_time
-        time_per_img = elapsed / i
-        eta = (total_images - i) * time_per_img
-        send_json_message("progress", {"current": i, "total": total_images, "percentage": (i / total_images) * 100, "elapsed": elapsed, "eta": eta, "time_per_img": time_per_img})
+        write_generation_output(kwargs['output_dir'], image_file, kwargs['gen_type'], final_output)
+        send_json_message("progress", build_progress_payload(i, total_images, start_time))
         send_json_message("image-complete", {"index": i})
 
 def run_koboldcpp_generation(config, koboldcpp_exe, models_dir, desired_model_key, low_vram, **kwargs):

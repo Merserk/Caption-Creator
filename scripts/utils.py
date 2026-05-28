@@ -2,16 +2,25 @@ import base64
 import io
 import json
 import os
+import re
+import time
 
 from PIL import Image, ImageOps
 
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.webp')
 
 
+def natural_file_name_key(file_name):
+    return [
+        int(part) if part.isdigit() else part.lower()
+        for part in re.split(r'(\d+)', file_name)
+    ]
+
+
 def list_image_files(input_dir):
     return sorted(
         [f for f in os.listdir(input_dir) if f.lower().endswith(IMAGE_EXTENSIONS)],
-        key=lambda x: int(os.path.splitext(x)[0]) if os.path.splitext(x)[0].isdigit() else -1,
+        key=natural_file_name_key,
     )
 
 
@@ -127,6 +136,8 @@ def format_generation_output(gen_type, raw_text, max_words, single_paragraph=Tru
         return format_tags(raw_text, max_tags=min(int(max_words), 200), trigger_words=trigger_words)
     if gen_type in ('json', 'yaml'):
         return clean_structured_output(raw_text)
+    if gen_type in ('illustrious', 'custom'):
+        return clean_structured_output(raw_text)
     return clean_caption_output(raw_text, max_words, single_paragraph, trigger_words)
 
 
@@ -135,6 +146,28 @@ def get_output_extension(gen_type):
         'json': '.json',
         'yaml': '.yaml',
     }.get(gen_type, '.txt')
+
+
+def write_generation_output(output_dir, image_file, gen_type, final_output):
+    output_file_name = os.path.splitext(image_file)[0] + get_output_extension(gen_type)
+    output_path = os.path.join(output_dir, output_file_name)
+    with open(output_path, 'w', encoding='utf-8') as out_file:
+        out_file.write(final_output)
+    return output_path
+
+
+def build_progress_payload(index, total_images, start_time):
+    elapsed = time.time() - start_time
+    time_per_img = elapsed / index
+    eta = (total_images - index) * time_per_img
+    return {
+        'current': index,
+        'total': total_images,
+        'percentage': (index / total_images) * 100,
+        'elapsed': elapsed,
+        'eta': eta,
+        'time_per_img': time_per_img,
+    }
 
 
 def caption_needs_retry(clean_text, max_words):

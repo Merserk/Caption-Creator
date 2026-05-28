@@ -16,13 +16,6 @@
             <span class="titlebar-title">Caption Creator</span>
         </div>
         <div class="titlebar-controls">
-            <button id="titlebar-online" class="titlebar-online-button">
-                Try Caption Creator Online
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
-            </button>
             <button id="titlebar-minimize" class="titlebar-button" aria-label="Minimize">
                 <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="1.5" rx="0.75" fill="currentColor"/></svg>
             </button>
@@ -38,7 +31,6 @@
         <div class="title-left-group">
             <img src="" id="app-icon" class="title-icon">
         </div>
-        <img src="" id="patreon-logo" title="Support on Patreon">
     </div>
     <div class="container">
         <!-- LEFT COLUMN -->
@@ -68,9 +60,12 @@
                     <div class="switch-option" data-value="tags">Tags</div>
                     <div class="switch-option" data-value="json">JSON</div>
                     <div class="switch-option" data-value="yaml">YAML</div>
+                    <div class="switch-option" data-value="illustrious">Illustrious</div>
+                    <div class="switch-option" data-value="custom">Custom</div>
                 </div>
             </div>
 
+            <textarea id="custom-prompt-input" placeholder="Custom Prompt" rows="5" style="display: none;"></textarea>
             <textarea id="trigger-words-input" placeholder="Trigger Words (Optional)" rows="3"></textarea>
             <textarea id="prompt-enrichment-input" placeholder="Prompt Enrichment (Optional)" rows="3"></textarea>
 
@@ -78,43 +73,32 @@
                 <label>Max Words</label>
                 <div id="custom-slider-container" class="custom-slider-container">
                     <div id="custom-slider-fill" class="custom-slider-fill">
-                        <span id="custom-slider-value" class="custom-slider-value">300</span>
+                        <span id="custom-slider-value" class="custom-slider-value">150</span>
                         <div class="custom-slider-handle"></div>
                     </div>
                     <span id="custom-slider-max" class="custom-slider-max">300</span>
                 </div>
                 <!-- Hidden input to easily get the value later -->
-                <input type="hidden" id="max-words-value" value="300">
+                <input type="hidden" id="max-words-value" value="150">
             </div>
 
-            <div class="gr-group">
-                <label>Configuration</label>
-                <div class="checkbox-button-group">
-                    <label class="checkbox-label" for="low-vram-input">
-                        <input type="checkbox" id="low-vram-input">
-                        Enable Low-VRAM Mode
-                    </label>
-                    <label class="checkbox-label" for="keep-model-loaded-input">
-                        <input type="checkbox" id="keep-model-loaded-input">
-                        Keep model loaded after generation
-                    </label>
-                    <label class="checkbox-label" for="shutdown-pc-input">
-                        <input type="checkbox" id="shutdown-pc-input">
-                        Shut down PC after generation
-                    </label>
-                </div>
-            </div>
+            <div class="left-action-stack">
+                <button type="button" id="configuration-button" class="left-action-button single-line-action">
+                    <div class="left-action-content">
+                        <span class="left-action-label">Configuration</span>
+                    </div>
+                </button>
 
+                <button type="button" id="model-select-button" class="left-action-button model-select-button">
+                    <div class="left-action-content">
+                        <span class="left-action-label">Model / VRAM Configuration</span>
+                        <span id="selected-model-value" class="left-action-value">Loading...</span>
+                    </div>
+                </button>
 
-
-            <div class="gr-group model-select-group" id="model-select-group">
-                <button type="button" id="model-select-button" class="model-select-button">
-                    <div class="model-select-content-wrapper">
-                        <!-- REMOVED: Icon element was here -->
-                        <div>
-                            <span class="model-select-label">Model / VRAM Configuration</span>
-                            <span id="selected-model-value" class="model-select-value">Loading...</span>
-                        </div>
+                <button type="button" id="about-button" class="left-action-button single-line-action">
+                    <div class="left-action-content">
+                        <span class="left-action-label">About</span>
                     </div>
                 </button>
             </div>
@@ -139,26 +123,81 @@
 
             <div class="right-column-fixed-bottom">
                 <div id="single-text-group" class="gr-group">
-                    <label for="single-text-output">Generated Text</label>
+                    <label id="single-text-output-label" for="single-text-output">Generated Text</label>
                     <textarea id="single-text-output"></textarea>
+                    <div id="single-negative-output-group" class="illustrious-negative-output" hidden>
+                        <label for="single-negative-output">Negative Prompt</label>
+                        <textarea id="single-negative-output"></textarea>
+                    </div>
                     <div class="button-group">
                         <button id="copy-button" class="gr-button-secondary">Copy to Clipboard</button>
-                        <button id="open-folder-button-single" class="gr-button-secondary">📂 Open Output
-                            Folder</button>
+                        <button id="open-folder-button-single" class="gr-button-secondary">📂 Open Output</button>
                         <button class="gr-button-primary start-button">Generate</button>
-                        <button class="gr-button-stop stop-button" style="display: none;">Stop</button>
+                        <button class="gr-button-secondary queue-button">Queue</button>
+                        <button class="gr-button-stop stop-button" title="Stop" aria-label="Stop" disabled>X</button>
                     </div>
                 </div>
 
                 <div id="batch-text-group" class="gr-group" style="display: none;">
-                    <label for="batch-text-output">Selected Image Text</label>
+                    <label id="batch-text-output-label" for="batch-text-output">Selected Image Text</label>
                     <textarea id="batch-text-output" readonly></textarea>
+                    <div id="batch-negative-output-group" class="illustrious-negative-output" hidden>
+                        <label for="batch-negative-output">Selected Image Negative Prompt</label>
+                        <textarea id="batch-negative-output" readonly></textarea>
+                    </div>
                     <div class="button-group">
                         <button id="copy-button-batch" class="gr-button-secondary">Copy to Clipboard</button>
                         <button id="download-zip-button" class="gr-button-secondary">Save as ZIP</button>
-                        <button id="open-folder-button-batch" class="gr-button-secondary">📂 Open Output Folder</button>
+                        <button id="open-folder-button-batch" class="gr-button-secondary">📂 Open Output</button>
                         <button class="gr-button-primary start-button">Generate</button>
-                        <button class="gr-button-stop stop-button" style="display: none;">Stop</button>
+                        <button class="gr-button-secondary queue-button">Queue</button>
+                        <button class="gr-button-stop stop-button" title="Stop" aria-label="Stop" disabled>X</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Queue -->
+    <div id="queue-modal-overlay" class="modal-overlay">
+        <div id="queue-modal-content" class="simple-modal-content queue-modal-content">
+            <button id="queue-modal-close-button" class="modal-close-button">×</button>
+            <div class="modal-panel simple-modal-panel queue-modal-panel">
+                <div class="simple-modal-header queue-modal-header">
+                    <div>
+                        <h2>Queue</h2>
+                        <p>Generation list</p>
+                    </div>
+                </div>
+                <div id="queue-empty-state" class="queue-empty-state">No queued generations.</div>
+                <div id="queue-list" class="queue-list"></div>
+                <div class="queue-modal-footer">
+                    <button type="button" id="queue-clear-finished-button" class="gr-button-secondary">Clear Finished</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Configuration -->
+    <div id="configuration-modal-overlay" class="modal-overlay">
+        <div id="configuration-modal-content" class="simple-modal-content">
+            <button id="configuration-modal-close-button" class="modal-close-button">×</button>
+            <div class="modal-panel simple-modal-panel">
+                <div class="simple-modal-header">
+                    <h2>Configuration</h2>
+                    <p>Generation behavior</p>
+                </div>
+                <div class="checkbox-button-group">
+                    <label class="checkbox-label" for="low-vram-input">
+                        <input type="checkbox" id="low-vram-input">
+                        Enable Low-VRAM Mode
+                    </label>
+                    <label class="checkbox-label" for="preserve-original-names-input">
+                        <input type="checkbox" id="preserve-original-names-input">
+                        Preserve original image file names
+                    </label>
+                    <div class="output-folder-setting">
+                        <button type="button" id="output-folder-button" class="gr-button-secondary">Select output folder (Current - Default)</button>
                     </div>
                 </div>
             </div>
@@ -167,15 +206,56 @@
 
     <!-- MODAL: Model Selection -->
     <div id="model-select-modal-overlay" class="modal-overlay">
-        <div id="model-options-panel" class="modal-panel">
+        <div id="model-select-modal-content" class="model-select-modal-content">
             <button id="model-modal-close-button" class="modal-close-button">×</button>
-            <!-- JS will populate this -->
+            <div id="model-options-panel" class="modal-panel">
+                <!-- JS will populate this -->
+            </div>
+            <div id="lm-studio-model-panel" class="lm-studio-model-panel" hidden>
+                <div class="lm-studio-model-panel-header">
+                    <span id="external-model-panel-title" class="lm-studio-model-panel-title">LM Studio Models</span>
+                    <span id="lm-studio-model-panel-status" class="lm-studio-model-panel-status"></span>
+                </div>
+                <div id="lm-studio-model-list" class="lm-studio-model-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: About -->
+    <div id="about-modal-overlay" class="modal-overlay">
+        <div id="about-modal-content" class="simple-modal-content">
+            <button id="about-modal-close-button" class="modal-close-button">×</button>
+            <div class="modal-panel simple-modal-panel about-modal-panel">
+                <div class="about-header">
+                    <img src="" id="about-app-icon" class="about-app-icon" alt="">
+                    <div>
+                        <h2 id="about-app-name">Caption Creator</h2>
+                    </div>
+                </div>
+                <dl class="about-meta">
+                    <div>
+                        <dt>Version</dt>
+                        <dd id="about-app-version">Loading...</dd>
+                    </div>
+                    <div>
+                        <dt>Author</dt>
+                        <dd id="about-app-author">Merserk</dd>
+                    </div>
+                </dl>
+                <div class="about-link-buttons">
+                    <button type="button" id="about-website-button" class="gr-button-secondary">Website</button>
+                    <button type="button" id="about-online-button" class="gr-button-secondary">Online Version</button>
+                    <button type="button" id="about-patreon-button" class="gr-button-secondary">
+                        <img src="" id="about-patreon-icon" class="about-patreon-icon" alt="">
+                        Patreon
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
 
-
-    <script src="./renderer.js"></script>
+    <script type="module" src="./renderer.js"></script>
 </body>
 
 </html>

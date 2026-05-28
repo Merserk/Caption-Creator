@@ -1,56 +1,55 @@
+import {
+    collectDOMElements,
+    createOutputController,
+    formatDownloadStatusMessage,
+    formatIllustriousClipboardText,
+    formatSeconds,
+    getQueueJob,
+    getQueueJobLabel,
+    getQueuedJobModelLabel,
+    getDownloadItemDisplayName,
+    getModelDisplayName,
+    isFinishedQueueStatus,
+    normalizeJobPayload,
+} from './renderer/ui.js';
+import {
+    LM_STUDIO_MODEL_KEY,
+    OLLAMA_MODEL_KEY,
+    appState,
+} from './renderer/state.js';
+
 let DOMElements;
+let displaySingleTextOutput;
+let displayBatchTextOutput;
+let handleGalleryClick;
+let renderOutputPlaceholders;
 
-// --- App State ---
-const appState = {
-    activeDownloads: new Set(),
-    lmStudioConnected: false,
-    statusAnimationInterval: null,
-    lmStudioHeartbeatInterval: null,
-    selectedModelKey: null,
-    lmStudioDotCount: 0,
-    batchFilenamesText: '',
-    singleHasSelection: false,
-    batchHasSelection: false,
-    isRunning: false,
-};
-
-// --- Helper Functions ---
-function formatSeconds(seconds) {
-    if (seconds === null || seconds === undefined) return '--s';
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round(seconds % 60);
-    return `${minutes}m ${remainingSeconds}s`;
+function getSelectedGenType() {
+    return document.querySelector('#gen-type-switch .switch-option.active')?.dataset.value || 'captions';
 }
 
-const MODEL_DISPLAY_NAMES = {
-    '6GB VRAM (E2B Q4_K_P)': '6GB VRAM AI Model',
-    '8GB VRAM (E4B Q4_K_P)': '8GB VRAM AI Model',
-    '10GB+ VRAM (E4B Q8_K_P)': '10GB VRAM AI Model',
-    '8GB VRAM (NSFW Q4_K_M)': '8GB VRAM AI Model (NSFW)',
-    '12GB VRAM (NSFW Q8_0)': '12GB VRAM AI Model (NSFW)',
-};
-
-function getModelDisplayName(modelKey) {
-    return MODEL_DISPLAY_NAMES[modelKey] || modelKey || '';
+function isExternalModelKey(modelKey) {
+    return modelKey === LM_STUDIO_MODEL_KEY || modelKey === OLLAMA_MODEL_KEY;
 }
 
-function getDownloadItemDisplayName(data = {}) {
-    const modelName = (data.model_name || '').toLowerCase();
-    const message = (data.message || '').toLowerCase();
+function getLmStudioModelDisplayName(modelKey) {
+    const model = appState.lmStudioModels.find(item => item.key === modelKey);
+    return model?.displayName || modelKey || '';
+}
 
-    if (modelName.includes('vision projector') || message.includes('vision projector') || message.includes('mmproj-')) {
-        return 'Vision Projector';
+function getOllamaModelDisplayName(modelKey) {
+    const model = appState.ollamaModels.find(item => item.key === modelKey);
+    return model?.displayName || modelKey || '';
+}
+
+function getSelectedModelLabel(modelKey = appState.selectedModelKey) {
+    if (modelKey === LM_STUDIO_MODEL_KEY && appState.selectedLmStudioModelKey) {
+        return `Custom (LM Studio) - ${getLmStudioModelDisplayName(appState.selectedLmStudioModelKey)}`;
     }
-
-    return getModelDisplayName(data.modelKey);
-}
-
-function formatDownloadStatusMessage(data = {}) {
-    const itemName = getDownloadItemDisplayName(data);
-    return String(data.message || '')
-        .replace(/mmproj-Gemma-4-[^\s]+?\.gguf/gi, 'Vision Projector')
-        .replace(/Gemma-4-[^\s]+?\.gguf/gi, itemName);
+    if (modelKey === OLLAMA_MODEL_KEY && appState.selectedOllamaModelKey) {
+        return `Custom (Ollama) - ${getOllamaModelDisplayName(appState.selectedOllamaModelKey)}`;
+    }
+    return getModelDisplayName(modelKey);
 }
 
 function clearStatusAnimation() {
@@ -62,21 +61,22 @@ function clearStatusAnimation() {
 
 function setRunningState(isRunning) {
     appState.isRunning = isRunning;
-    DOMElements.startButtons.forEach(btn => btn.style.display = isRunning ? 'none' : 'block');
-    DOMElements.stopButtons.forEach(btn => btn.style.display = isRunning ? 'block' : 'none');
+    DOMElements.stopButtons.forEach(btn => {
+        btn.disabled = !isRunning;
+        btn.style.cursor = isRunning ? 'pointer' : 'not-allowed';
+    });
 
     DOMElements.progressBarContainer.style.display = isRunning ? 'block' : 'none';
     if (!isRunning) {
         DOMElements.progressBar.style.width = '0%';
         setTimeout(() => {
-            if (DOMElements.startButtons[0].style.display === 'block') {
+            if (!appState.isRunning) {
                 DOMElements.progressBarContainer.style.display = 'none';
             }
         }, 1500);
     }
 
     updateStartButtonState();
-    toggleInputInteractivity(!isRunning);
 }
 
 function toggleInputInteractivity(enabled) {
@@ -95,12 +95,64 @@ function toggleInputInteractivity(enabled) {
 function updateStartButtonState() {
     const mode = document.querySelector('#mode-switch .switch-option.active')?.dataset.value;
     const hasSelection = mode === 'Single Image' ? appState.singleHasSelection : appState.batchHasSelection;
-    const disabled = appState.isRunning || !hasSelection;
+    const disabled = appState.isPreparingQueueJob || !hasSelection;
     DOMElements.startButtons.forEach(btn => {
         btn.disabled = disabled;
         btn.style.opacity = disabled ? '0.6' : '1';
         btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
     });
+}
+
+function updateGenerationTypeUI() {
+    const genType = getSelectedGenType();
+    const isCustom = genType === 'custom';
+    const isIllustrious = genType === 'illustrious';
+
+    DOMElements.customPromptInput.style.display = isCustom ? 'block' : 'none';
+    DOMElements.singleNegativeOutputGroup.hidden = !isIllustrious;
+    DOMElements.batchNegativeOutputGroup.hidden = !isIllustrious;
+    DOMElements.singleTextOutputLabel.textContent = isIllustrious ? 'Positive Prompt' : 'Generated Text';
+    DOMElements.batchTextOutputLabel.textContent = isIllustrious ? 'Selected Image Positive Prompt' : 'Selected Image Text';
+
+    if (!isIllustrious) {
+        DOMElements.singleNegativeOutput.value = '';
+        DOMElements.batchNegativeOutput.value = '';
+    }
+}
+
+async function loadCustomPrompt() {
+    try {
+        const result = await window.electronAPI.getCustomPrompt();
+        DOMElements.customPromptInput.value = result?.customPrompt || '';
+    } catch (error) {
+        console.error('Failed to load custom prompt:', error);
+    }
+}
+
+async function saveCustomPromptNow() {
+    if (appState.customPromptSaveTimer) {
+        clearTimeout(appState.customPromptSaveTimer);
+        appState.customPromptSaveTimer = null;
+    }
+
+    try {
+        const result = await window.electronAPI.saveCustomPrompt(DOMElements.customPromptInput.value);
+        DOMElements.customPromptInput.value = result?.customPrompt ?? DOMElements.customPromptInput.value;
+        return true;
+    } catch (error) {
+        console.error('Failed to save custom prompt:', error);
+        DOMElements.statusOutput.value = `Unable to save Custom prompt: ${error.message || error}`;
+        return false;
+    }
+}
+
+function scheduleCustomPromptSave() {
+    if (appState.customPromptSaveTimer) {
+        clearTimeout(appState.customPromptSaveTimer);
+    }
+    appState.customPromptSaveTimer = setTimeout(() => {
+        saveCustomPromptNow();
+    }, 500);
 }
 
 async function handleFileSelection(selection) {
@@ -158,15 +210,70 @@ async function handleBatchSelection(result) {
     updateStartButtonState();
 }
 
+async function resetSelectedImages(mode) {
+    await window.electronAPI.clearSelectedImages(mode);
+
+    if (mode === 'Single Image') {
+        appState.singleHasSelection = false;
+        DOMElements.singleImagePreview.removeAttribute('src');
+        DOMElements.singleImagePreview.style.display = 'none';
+        DOMElements.uploadPlaceholder.style.display = 'flex';
+        DOMElements.statusOutput.value = 'Single image selection reset.';
+    } else {
+        appState.batchHasSelection = false;
+        appState.batchFilenamesText = '';
+        DOMElements.statusOutput.value = 'Batch image selection reset.';
+    }
+
+    updateStartButtonState();
+}
+
 function updateCheckboxStates() {
-    const isLmStudio = appState.selectedModelKey === 'Custom (LM Studio)';
-    DOMElements.lowVramInput.disabled = isLmStudio;
-    DOMElements.keepModelLoadedInput.disabled = isLmStudio;
+    const isExternal = isExternalModelKey(appState.selectedModelKey);
+    DOMElements.lowVramInput.disabled = isExternal;
+}
+
+function updateOutputFolderUI(preference) {
+    if (!preference) return;
+    appState.outputFolderPreference = preference;
+    const hasCustomOutputRoot = !!preference.customOutputRoot;
+    const currentName = hasCustomOutputRoot
+        ? preference.customOutputRoot.split(/[\\/]/).filter(Boolean).pop()
+        : 'Default';
+    DOMElements.outputFolderButton.textContent = hasCustomOutputRoot
+        ? `Reset output folder (Current - ${currentName})`
+        : 'Select output folder (Current - Default)';
+}
+
+async function refreshOutputFolderPreference() {
+    try {
+        const preference = await window.electronAPI.getOutputFolderPreference();
+        updateOutputFolderUI(preference);
+    } catch (error) {
+        console.error('Failed to load output folder preference:', error);
+        DOMElements.outputFolderButton.textContent = 'Select output folder (Current - Unavailable)';
+    }
+}
+
+async function handleOutputFolderButtonClick() {
+    DOMElements.outputFolderButton.disabled = true;
+    try {
+        const currentPreference = appState.outputFolderPreference;
+        const nextPreference = currentPreference?.customOutputRoot
+            ? await window.electronAPI.clearOutputFolderPreference()
+            : await window.electronAPI.selectOutputFolder();
+        updateOutputFolderUI(nextPreference);
+    } catch (error) {
+        console.error('Failed to update output folder preference:', error);
+        DOMElements.outputFolderButton.textContent = 'Select output folder (Current - Unavailable)';
+    } finally {
+        DOMElements.outputFolderButton.disabled = false;
+    }
 }
 
 function showGenerationStartupStatus(modelKey) {
     clearStatusAnimation();
-    const message = modelKey === 'Custom (LM Studio)'
+    const message = isExternalModelKey(modelKey)
         ? 'Connecting to the AI...'
         : 'Starting backend...';
     DOMElements.statusOutput.value = message;
@@ -181,11 +288,269 @@ function showGenerationStartupStatus(modelKey) {
     }, 400);
 }
 
+function updateQueueButtonLabels() {
+    if (!DOMElements?.queueButtons) return;
+
+    const count = appState.generationQueue.length;
+    const label = count > 0 ? `Queue (${count})` : 'Queue';
+    DOMElements.queueButtons.forEach(button => {
+        button.textContent = label;
+    });
+}
+
+function renderQueueModal() {
+    if (!DOMElements?.queueList) return;
+
+    updateQueueButtonLabels();
+    DOMElements.queueList.innerHTML = '';
+    DOMElements.queueEmptyState.style.display = appState.generationQueue.length === 0 ? 'block' : 'none';
+    DOMElements.queueClearFinishedButton.disabled = !appState.generationQueue.some(job => isFinishedQueueStatus(job.status));
+
+    appState.generationQueue.forEach((job, index) => {
+        const row = document.createElement('div');
+        row.className = 'queue-item';
+
+        const details = document.createElement('div');
+        details.className = 'queue-item-details';
+
+        const title = document.createElement('div');
+        title.className = 'queue-item-title';
+        title.textContent = `${index + 1}. ${job.label}`;
+        details.appendChild(title);
+
+        const meta = document.createElement('div');
+        meta.className = 'queue-item-meta';
+        meta.textContent = job.error || getQueuedJobModelLabel(job.options, {
+            lmStudio: getLmStudioModelDisplayName,
+            ollama: getOllamaModelDisplayName,
+        });
+        details.appendChild(meta);
+
+        const status = document.createElement('span');
+        status.className = `queue-status-chip queue-status-${job.status}`;
+        status.textContent = {
+            pending: 'Pending',
+            running: 'Running',
+            completed: 'Completed',
+            stopped: 'Stopped',
+            failed: 'Failed',
+        }[job.status] || job.status;
+
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'gr-button-secondary queue-remove-button';
+        action.dataset.jobId = job.id;
+        action.textContent = 'Remove';
+        action.hidden = job.status !== 'pending';
+
+        row.appendChild(details);
+        row.appendChild(status);
+        row.appendChild(action);
+        DOMElements.queueList.appendChild(row);
+    });
+}
+
+function openQueueModal() {
+    renderQueueModal();
+    DOMElements.queueModalOverlay.classList.add('is-visible');
+}
+
+async function removePendingQueueJob(jobId) {
+    const index = appState.generationQueue.findIndex(job => job.id === jobId && job.status === 'pending');
+    if (index === -1) return;
+
+    await window.electronAPI.discardPreparedGeneration(jobId);
+    appState.generationQueue.splice(index, 1);
+    renderQueueModal();
+}
+
+async function clearFinishedQueueJobs() {
+    const finishedJobs = appState.generationQueue.filter(job => isFinishedQueueStatus(job.status));
+    await Promise.all(finishedJobs.map(job => window.electronAPI.discardPreparedGeneration(job.id)));
+    appState.generationQueue = appState.generationQueue.filter(job => !isFinishedQueueStatus(job.status));
+    renderQueueModal();
+}
+
+function stopExternalHeartbeatForJob(job) {
+    if (job?.options.desired_model_key === LM_STUDIO_MODEL_KEY) {
+        stopLmStudioHeartbeat();
+    } else if (job?.options.desired_model_key === OLLAMA_MODEL_KEY) {
+        stopOllamaHeartbeat();
+    }
+}
+
+function startExternalHeartbeatForJob(job) {
+    if (job?.options.desired_model_key === LM_STUDIO_MODEL_KEY) {
+        startLmStudioHeartbeat();
+    } else if (job?.options.desired_model_key === OLLAMA_MODEL_KEY) {
+        startOllamaHeartbeat();
+    }
+}
+
+async function cleanupPreparedJob(jobId) {
+    try {
+        await window.electronAPI.discardPreparedGeneration(jobId);
+    } catch (error) {
+        console.error('Failed to discard prepared queue job:', error);
+    }
+}
+
+async function finishActiveQueueJob(job, status, errorMessage = '') {
+    if (!job || appState.activeQueueJobId !== job.id) return;
+
+    job.status = status;
+    job.error = errorMessage;
+    await cleanupPreparedJob(job.id);
+    startExternalHeartbeatForJob(job);
+    appState.activeQueueJobId = null;
+    setRunningState(false);
+    renderQueueModal();
+    processNextQueuedJob();
+}
+
+async function processNextQueuedJob() {
+    if (appState.isRunning || appState.activeQueueJobId) return;
+
+    const nextJob = appState.generationQueue.find(job => job.status === 'pending');
+    if (!nextJob) {
+        setRunningState(false);
+        renderQueueModal();
+        return;
+    }
+
+    nextJob.status = 'running';
+    nextJob.error = '';
+    appState.activeQueueJobId = nextJob.id;
+    renderQueueModal();
+    setRunningState(true);
+    stopExternalHeartbeatForJob(nextJob);
+    showGenerationStartupStatus(nextJob.options.desired_model_key);
+
+    try {
+        const outputFiles = await window.electronAPI.startPreparedGeneration({
+            jobId: nextJob.id,
+            options: nextJob.options,
+        });
+        nextJob.outputFiles = outputFiles || [];
+        renderOutputPlaceholders(nextJob, nextJob.outputFiles);
+    } catch (error) {
+        clearStatusAnimation();
+        DOMElements.statusOutput.value = `ERROR: \n${error.message || error}`;
+        await finishActiveQueueJob(nextJob, 'failed', error.message || String(error));
+    }
+}
+
+async function buildGenerationOptionsFromCurrentSelection() {
+    const selectedGenType = getSelectedGenType();
+    if (selectedGenType === 'custom') {
+        const saved = await saveCustomPromptNow();
+        if (!saved) return null;
+
+        if (!DOMElements.customPromptInput.value.trim()) {
+            DOMElements.statusOutput.value = 'Please enter a Custom Prompt before starting.';
+            DOMElements.customPromptInput.focus();
+            return null;
+        }
+    }
+
+    if (!appState.selectedModelKey) {
+        alert("Please select a model first.");
+        return null;
+    }
+
+    const currentMode = document.querySelector('#mode-switch .switch-option.active').dataset.value;
+    const hasSelection = currentMode === 'Single Image' ? appState.singleHasSelection : appState.batchHasSelection;
+    if (!hasSelection) {
+        DOMElements.statusOutput.value = currentMode === 'Single Image'
+            ? 'Please select a single image before starting.'
+            : 'Please select batch images before starting.';
+        return null;
+    }
+
+    if (appState.selectedModelKey === LM_STUDIO_MODEL_KEY) {
+        const result = await window.electronAPI.checkLmStudioConnection();
+        if (!result.success) {
+            updateLmStudioUI(false);
+            alert("Connection to LM Studio lost. Please ensure LM Studio is running and retry connection.");
+            return null;
+        }
+        if (!appState.selectedLmStudioModelKey) {
+            alert("Please select an LM Studio model first.");
+            DOMElements.modelSelectModalOverlay.classList.add('is-visible');
+            await refreshLmStudioModels();
+            return null;
+        }
+    }
+
+    if (appState.selectedModelKey === OLLAMA_MODEL_KEY) {
+        const result = await window.electronAPI.checkOllamaConnection();
+        if (!result.success) {
+            updateOllamaUI(false);
+            alert("Connection to Ollama lost. Please ensure Ollama is running and retry connection.");
+            return null;
+        }
+        if (!appState.selectedOllamaModelKey) {
+            alert("Please select an Ollama model first.");
+            DOMElements.modelSelectModalOverlay.classList.add('is-visible');
+            await refreshOllamaModels();
+            return null;
+        }
+    }
+
+    return {
+        mode: currentMode,
+        gen_type: selectedGenType,
+        trigger_words: document.getElementById('trigger-words-input').value,
+        prompt_enrichment: document.getElementById('prompt-enrichment-input').value,
+        custom_prompt: DOMElements.customPromptInput.value,
+        max_words: DOMElements.customSlider.hiddenInput.value,
+        single_paragraph: true,
+        desired_model_key: appState.selectedModelKey,
+        low_vram: DOMElements.lowVramInput.checked,
+        preserve_original_names: DOMElements.preserveOriginalNamesInput.checked,
+        lm_studio_model_key: appState.selectedLmStudioModelKey,
+        ollama_model_key: appState.selectedOllamaModelKey,
+    };
+}
+
+async function enqueueGenerationFlow() {
+    if (appState.isPreparingQueueJob) return;
+
+    const options = await buildGenerationOptionsFromCurrentSelection();
+    if (!options) return;
+
+    appState.isPreparingQueueJob = true;
+    updateStartButtonState();
+    DOMElements.statusOutput.value = 'Adding generation to queue...';
+
+    try {
+        const preparedJob = await window.electronAPI.prepareGenerationJob(options);
+        const job = {
+            id: preparedJob.jobId,
+            options,
+            label: getQueueJobLabel(options),
+            status: 'pending',
+            error: '',
+            outputFiles: [],
+        };
+
+        appState.generationQueue.push(job);
+        DOMElements.statusOutput.value = `Queued: ${job.label}`;
+        renderQueueModal();
+        processNextQueuedJob();
+    } catch (error) {
+        DOMElements.statusOutput.value = `ERROR: \n${error.message || error}`;
+    } finally {
+        appState.isPreparingQueueJob = false;
+        updateStartButtonState();
+    }
+}
+
 function updateModelStatusTexts() {
     const { modelOptionsPanel } = DOMElements;
     if (!modelOptionsPanel) return;
 
-    const modelItems = modelOptionsPanel.querySelectorAll('.model-selector-item:not([data-model-key="Custom (LM Studio)"])');
+    const modelItems = modelOptionsPanel.querySelectorAll('.model-selector-item:not([data-model-key="Custom (LM Studio)"]):not([data-model-key="Custom (Ollama)"])');
 
     modelItems.forEach(item => {
         const modelKey = item.dataset.modelKey;
@@ -201,10 +566,340 @@ function updateModelStatusTexts() {
     });
 }
 
+function formatExternalModelMeta(model) {
+    const parts = [];
+    if (model.params) parts.push(model.params);
+    if (model.quantization) parts.push(model.quantization);
+    if (model.loaded) parts.push('Loaded');
+    return parts.join(' | ');
+}
+
+function updateSelectedModelValue() {
+    DOMElements.selectedModelValue.textContent = appState.selectedModelKey
+        ? getSelectedModelLabel(appState.selectedModelKey)
+        : 'No models available';
+}
+
+function updateLmStudioStatusText() {
+    const statusSpan = document.getElementById('lm-studio-status');
+    if (!statusSpan) return;
+
+    if (appState.lmStudioConnected) {
+        statusSpan.textContent = appState.selectedLmStudioModelKey
+            ? `Selected: ${getLmStudioModelDisplayName(appState.selectedLmStudioModelKey)}`
+            : 'Connected';
+        statusSpan.className = 'model-status-text connected';
+        return;
+    }
+
+    appState.lmStudioDotCount = (appState.lmStudioDotCount % 3) + 1;
+    const dots = '.'.repeat(appState.lmStudioDotCount);
+    statusSpan.innerHTML = `Searching<span class="searching-dots">${dots}</span>`;
+    statusSpan.className = 'model-status-text searching';
+}
+
+function updateOllamaStatusText() {
+    const statusSpan = document.getElementById('ollama-status');
+    if (!statusSpan) return;
+
+    if (appState.ollamaConnected) {
+        statusSpan.textContent = appState.selectedOllamaModelKey
+            ? `Selected: ${getOllamaModelDisplayName(appState.selectedOllamaModelKey)}`
+            : 'Connected';
+        statusSpan.className = 'model-status-text connected';
+        return;
+    }
+
+    appState.ollamaDotCount = (appState.ollamaDotCount % 3) + 1;
+    const dots = '.'.repeat(appState.ollamaDotCount);
+    statusSpan.innerHTML = `Searching<span class="searching-dots">${dots}</span>`;
+    statusSpan.className = 'model-status-text searching';
+}
+
+function getExternalPanelConfig(kind) {
+    if (kind === 'ollama') {
+        return {
+            selectedBackendKey: OLLAMA_MODEL_KEY,
+            title: 'Ollama Models',
+            connected: appState.ollamaConnected,
+            models: appState.ollamaModels,
+            selectedModelKey: appState.selectedOllamaModelKey,
+            loadingModelKey: appState.ollamaLoadingModelKey,
+            ejectingModelKey: appState.ollamaEjectingModelKey,
+            error: appState.ollamaModelError,
+            emptyText: 'No vision models found in Ollama.',
+            onSelect: handleOllamaModelSelect,
+            onEject: handleOllamaModelEject,
+        };
+    }
+
+    return {
+        selectedBackendKey: LM_STUDIO_MODEL_KEY,
+        title: 'LM Studio Models',
+        connected: appState.lmStudioConnected,
+        models: appState.lmStudioModels,
+        selectedModelKey: appState.selectedLmStudioModelKey,
+        loadingModelKey: appState.lmStudioLoadingModelKey,
+        ejectingModelKey: appState.lmStudioEjectingModelKey,
+        error: appState.lmStudioModelError,
+        emptyText: 'No vision models found in LM Studio.',
+        onSelect: handleLmStudioModelSelect,
+        onEject: handleLmStudioModelEject,
+    };
+}
+
+function renderExternalModelPanel(kind) {
+    const config = getExternalPanelConfig(kind);
+    const { lmStudioModelPanel, lmStudioModelList, lmStudioModelPanelStatus } = DOMElements;
+    if (!lmStudioModelPanel || !lmStudioModelList) return;
+
+    const panelTitle = document.getElementById('external-model-panel-title');
+    if (panelTitle) panelTitle.textContent = config.title;
+
+    const shouldShow = appState.selectedModelKey === config.selectedBackendKey && config.connected;
+    lmStudioModelPanel.hidden = !shouldShow;
+    if (!shouldShow) {
+        lmStudioModelList.innerHTML = '';
+        if (lmStudioModelPanelStatus) lmStudioModelPanelStatus.textContent = '';
+        return;
+    }
+
+    if (lmStudioModelPanelStatus) {
+        lmStudioModelPanelStatus.textContent = '';
+    }
+
+    lmStudioModelList.innerHTML = '';
+
+    if (config.error) {
+        const error = document.createElement('div');
+        error.className = 'lm-studio-model-empty error';
+        error.textContent = config.error;
+        lmStudioModelList.appendChild(error);
+        return;
+    }
+
+    if (config.models.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'lm-studio-model-empty';
+        empty.textContent = config.emptyText;
+        lmStudioModelList.appendChild(empty);
+        return;
+    }
+
+    config.models.forEach(model => {
+        const item = document.createElement('div');
+        item.className = 'lm-studio-model-item';
+        item.dataset.modelKey = model.key;
+        if (model.key === config.selectedModelKey) {
+            item.classList.add('is-selected');
+        }
+        if (model.key === config.loadingModelKey) {
+            item.classList.add('is-loading');
+        }
+        if (model.key === config.ejectingModelKey) {
+            item.classList.add('is-loading');
+        }
+
+        const content = document.createElement('div');
+        content.className = 'lm-studio-model-item-content';
+
+        const title = document.createElement('span');
+        title.className = 'lm-studio-model-name';
+        title.textContent = model.displayName;
+
+        const meta = document.createElement('span');
+        meta.className = 'lm-studio-model-meta';
+        meta.textContent = formatExternalModelMeta(model) || model.key;
+
+        content.appendChild(title);
+        content.appendChild(meta);
+
+        const actionButton = document.createElement('button');
+        actionButton.type = 'button';
+        actionButton.className = 'lm-studio-model-action-button';
+        actionButton.disabled = !!config.loadingModelKey || !!config.ejectingModelKey;
+        if (model.key === config.loadingModelKey) {
+            actionButton.textContent = 'Loading...';
+            actionButton.disabled = true;
+        } else if (model.key === config.ejectingModelKey) {
+            actionButton.textContent = 'Ejecting...';
+            actionButton.disabled = true;
+        } else if (model.key === config.selectedModelKey) {
+            actionButton.textContent = 'Eject';
+            actionButton.classList.add('eject');
+            actionButton.addEventListener('click', () => config.onEject(model));
+        } else {
+            actionButton.textContent = 'Select';
+            actionButton.addEventListener('click', () => config.onSelect(model.key));
+        }
+
+        item.appendChild(content);
+        item.appendChild(actionButton);
+        lmStudioModelList.appendChild(item);
+    });
+}
+
+function renderLmStudioModelPanel() {
+    renderExternalModelPanel('lmStudio');
+}
+
+function renderOllamaModelPanel() {
+    renderExternalModelPanel('ollama');
+}
+
+async function refreshLmStudioModels() {
+    if (!appState.lmStudioConnected || !window.electronAPI?.getLmStudioModels) {
+        renderLmStudioModelPanel();
+        return;
+    }
+
+    appState.lmStudioModelError = '';
+    const result = await window.electronAPI.getLmStudioModels();
+    if (!result.success) {
+        appState.lmStudioModels = [];
+        appState.lmStudioModelError = result.error || 'Could not load LM Studio models.';
+    } else {
+        appState.lmStudioModels = result.models || [];
+        if (
+            appState.selectedLmStudioModelKey
+            && !appState.lmStudioModels.some(model => model.key === appState.selectedLmStudioModelKey)
+        ) {
+            appState.selectedLmStudioModelKey = null;
+        }
+    }
+
+    updateLmStudioStatusText();
+    updateSelectedModelValue();
+    renderLmStudioModelPanel();
+}
+
+async function handleLmStudioModelSelect(modelKey) {
+    if (!modelKey || appState.lmStudioLoadingModelKey || appState.lmStudioEjectingModelKey) return;
+
+    appState.selectedModelKey = LM_STUDIO_MODEL_KEY;
+    appState.lmStudioLoadingModelKey = modelKey;
+    appState.lmStudioModelError = '';
+    updateSelectedModelValue();
+    updateLmStudioStatusText();
+    renderLmStudioModelPanel();
+
+    const result = await window.electronAPI.loadLmStudioModel(modelKey);
+    appState.lmStudioLoadingModelKey = null;
+
+    if (!result.success) {
+        appState.lmStudioModelError = result.error || 'Could not load selected LM Studio model.';
+        renderLmStudioModelPanel();
+        return;
+    }
+
+    appState.selectedLmStudioModelKey = modelKey;
+    DOMElements.statusOutput.value = `LM Studio model loaded: ${getLmStudioModelDisplayName(modelKey)}`;
+    await refreshLmStudioModels();
+}
+
+async function handleLmStudioModelEject(model) {
+    if (!model?.key || appState.lmStudioLoadingModelKey || appState.lmStudioEjectingModelKey) return;
+
+    appState.lmStudioEjectingModelKey = model.key;
+    appState.lmStudioModelError = '';
+    renderLmStudioModelPanel();
+
+    const result = await window.electronAPI.unloadLmStudioModel({
+        modelKey: model.key,
+        instanceIds: model.loadedInstanceIds || [],
+    });
+    appState.lmStudioEjectingModelKey = null;
+
+    if (!result.success) {
+        appState.lmStudioModelError = result.error || 'Could not eject selected LM Studio model.';
+        renderLmStudioModelPanel();
+        return;
+    }
+
+    if (appState.selectedLmStudioModelKey === model.key) {
+        appState.selectedLmStudioModelKey = null;
+    }
+    DOMElements.statusOutput.value = `LM Studio model ejected: ${model.displayName}`;
+    await refreshLmStudioModels();
+}
+
+async function refreshOllamaModels() {
+    if (!appState.ollamaConnected || !window.electronAPI?.getOllamaModels) {
+        renderOllamaModelPanel();
+        return;
+    }
+
+    appState.ollamaModelError = '';
+    const result = await window.electronAPI.getOllamaModels();
+    if (!result.success) {
+        appState.ollamaModels = [];
+        appState.ollamaModelError = result.error || 'Could not load Ollama models.';
+    } else {
+        appState.ollamaModels = result.models || [];
+        if (
+            appState.selectedOllamaModelKey
+            && !appState.ollamaModels.some(model => model.key === appState.selectedOllamaModelKey)
+        ) {
+            appState.selectedOllamaModelKey = null;
+        }
+    }
+
+    updateOllamaStatusText();
+    updateSelectedModelValue();
+    renderOllamaModelPanel();
+}
+
+async function handleOllamaModelSelect(modelKey) {
+    if (!modelKey || appState.ollamaLoadingModelKey || appState.ollamaEjectingModelKey) return;
+
+    appState.selectedModelKey = OLLAMA_MODEL_KEY;
+    appState.ollamaLoadingModelKey = modelKey;
+    appState.ollamaModelError = '';
+    updateSelectedModelValue();
+    updateOllamaStatusText();
+    renderOllamaModelPanel();
+
+    const result = await window.electronAPI.loadOllamaModel(modelKey);
+    appState.ollamaLoadingModelKey = null;
+
+    if (!result.success) {
+        appState.ollamaModelError = result.error || 'Could not load selected Ollama model.';
+        renderOllamaModelPanel();
+        return;
+    }
+
+    appState.selectedOllamaModelKey = modelKey;
+    DOMElements.statusOutput.value = `Ollama model loaded: ${getOllamaModelDisplayName(modelKey)}`;
+    await refreshOllamaModels();
+}
+
+async function handleOllamaModelEject(model) {
+    if (!model?.key || appState.ollamaLoadingModelKey || appState.ollamaEjectingModelKey) return;
+
+    appState.ollamaEjectingModelKey = model.key;
+    appState.ollamaModelError = '';
+    renderOllamaModelPanel();
+
+    const result = await window.electronAPI.unloadOllamaModel(model.key);
+    appState.ollamaEjectingModelKey = null;
+
+    if (!result.success) {
+        appState.ollamaModelError = result.error || 'Could not eject selected Ollama model.';
+        renderOllamaModelPanel();
+        return;
+    }
+
+    if (appState.selectedOllamaModelKey === model.key) {
+        appState.selectedOllamaModelKey = null;
+    }
+    DOMElements.statusOutput.value = `Ollama model ejected: ${model.displayName}`;
+    await refreshOllamaModels();
+}
+
 // --- UI Population ---
 async function populateModelList() {
     const models = await window.electronAPI.getModelAvailability();
-    const { modelOptionsPanel, selectedModelValue } = DOMElements;
+    const { modelOptionsPanel } = DOMElements;
 
     modelOptionsPanel.innerHTML = '';
     let firstAvailableModel = null;
@@ -229,11 +924,11 @@ async function populateModelList() {
         itemContainer.appendChild(input);
         itemContainer.appendChild(label);
 
-        if (model.key === "Custom (LM Studio)") {
+        if (isExternalModelKey(model.key)) {
             if (!firstAvailableModel) firstAvailableModel = model.key;
 
             const statusSpan = document.createElement('span');
-            statusSpan.id = 'lm-studio-status';
+            statusSpan.id = model.key === LM_STUDIO_MODEL_KEY ? 'lm-studio-status' : 'ollama-status';
             statusSpan.className = 'model-status-text';
             itemContainer.appendChild(statusSpan);
         } else {
@@ -294,11 +989,30 @@ async function populateModelList() {
 
         itemContainer.addEventListener('click', () => {
             if (input.disabled) return;
+            const isLmStudio = model.key === LM_STUDIO_MODEL_KEY;
+            const isOllama = model.key === OLLAMA_MODEL_KEY;
             appState.selectedModelKey = model.key;
-            selectedModelValue.textContent = getModelDisplayName(model.key);
+            updateSelectedModelValue();
             document.querySelectorAll('.model-selector-item.is-selected').forEach(el => el.classList.remove('is-selected'));
             itemContainer.classList.add('is-selected');
-            DOMElements.modelSelectModalOverlay.classList.remove('is-visible');
+            if (isLmStudio) {
+                renderLmStudioModelPanel();
+                if (appState.lmStudioConnected) {
+                    refreshLmStudioModels();
+                } else {
+                    DOMElements.modelSelectModalOverlay.classList.remove('is-visible');
+                }
+            } else if (isOllama) {
+                renderOllamaModelPanel();
+                if (appState.ollamaConnected) {
+                    refreshOllamaModels();
+                } else {
+                    DOMElements.modelSelectModalOverlay.classList.remove('is-visible');
+                }
+            } else {
+                DOMElements.lmStudioModelPanel.hidden = true;
+                DOMElements.modelSelectModalOverlay.classList.remove('is-visible');
+            }
             updateCheckboxStates();
             updateModelStatusTexts();
         });
@@ -307,7 +1021,7 @@ async function populateModelList() {
     if (!appState.selectedModelKey) {
         appState.selectedModelKey = firstAvailableModel;
     }
-    selectedModelValue.textContent = appState.selectedModelKey ? getModelDisplayName(appState.selectedModelKey) : 'No models available';
+    updateSelectedModelValue();
     if (appState.selectedModelKey) {
         const selectedItem = modelOptionsPanel.querySelector(`.model-selector-item[data-model-key="${appState.selectedModelKey}"]`);
         if (selectedItem) selectedItem.classList.add('is-selected');
@@ -315,6 +1029,7 @@ async function populateModelList() {
     updateCheckboxStates();
     updateModelStatusTexts();
     startLmStudioHeartbeat();
+    startOllamaHeartbeat();
 }
 
 function setupCustomSlider() {
@@ -364,71 +1079,99 @@ function setupCustomSlider() {
 
 // --- Event Listeners ---
 window.addEventListener('DOMContentLoaded', async () => {
-    DOMElements = {
-        singleTextGroup: document.getElementById('single-text-group'),
-        batchTextGroup: document.getElementById('batch-text-group'),
-        singleUploadBox: document.getElementById('single-upload-box'),
-        uploadPlaceholder: document.getElementById('upload-placeholder'),
-        singleImagePreview: document.getElementById('single-image-preview'),
-        batchUploadBox: document.getElementById('batch-upload-box'),
-        startButtons: document.querySelectorAll('.start-button'),
-        stopButtons: document.querySelectorAll('.stop-button'),
-        statusOutput: document.getElementById('status-output'),
-        progressBar: document.getElementById('progress-bar'),
-        progressBarContainer: document.getElementById('progress-bar-container'),
-        singleImageOutput: document.getElementById('single-image-output'),
-        singleTextOutput: document.getElementById('single-text-output'),
-        batchGalleryOutput: document.getElementById('batch-gallery-output'),
-        batchTextOutput: document.getElementById('batch-text-output'),
-        copyButton: document.getElementById('copy-button'),
-        copyButtonBatch: document.getElementById('copy-button-batch'),
-        openFolderSingle: document.getElementById('open-folder-button-single'),
-        openFolderBatch: document.getElementById('open-folder-button-batch'),
-        downloadZipButton: document.getElementById('download-zip-button'),
-        lowVramInput: document.getElementById('low-vram-input'),
-        keepModelLoadedInput: document.getElementById('keep-model-loaded-input'),
-        patreonLogo: document.getElementById('patreon-logo'),
-        appIcon: document.getElementById('app-icon'),
-        modelSelectButton: document.getElementById('model-select-button'),
-        selectedModelValue: document.getElementById('selected-model-value'),
-        modelSelectModalOverlay: document.getElementById('model-select-modal-overlay'),
-        modelModalCloseButton: document.getElementById('model-modal-close-button'),
-        modelOptionsPanel: document.getElementById('model-options-panel'),
-        modeSwitch: document.getElementById('mode-switch'),
-        genTypeSwitch: document.getElementById('gen-type-switch'),
-        customSlider: {
-            container: document.getElementById('custom-slider-container'),
-            fill: document.getElementById('custom-slider-fill'),
-            valueText: document.getElementById('custom-slider-value'),
-            hiddenInput: document.getElementById('max-words-value'),
-        },
-    };
+    DOMElements = collectDOMElements();
+    ({
+        displaySingleTextOutput,
+        displayBatchTextOutput,
+        handleGalleryClick,
+        renderOutputPlaceholders,
+    } = createOutputController({
+        appState,
+        getDOMElements: () => DOMElements,
+        getSelectedGenType,
+    }));
 
     const logoSrc = await window.electronAPI.getPatreonLogo();
-    if (logoSrc) DOMElements.patreonLogo.src = logoSrc;
-    else DOMElements.patreonLogo.style.display = 'none';
-    DOMElements.patreonLogo.addEventListener('click', () => window.electronAPI.openPatreonLink());
+    if (logoSrc) DOMElements.aboutPatreonIcon.src = logoSrc;
+    else DOMElements.aboutPatreonIcon.style.display = 'none';
 
     const iconSrc = await window.electronAPI.getAppIcon();
     if (iconSrc) {
         DOMElements.appIcon.src = iconSrc;
+        DOMElements.aboutAppIcon.src = iconSrc;
         DOMElements.appIcon.addEventListener('click', () => window.electronAPI.openMainLink());
     } else {
         DOMElements.appIcon.style.display = 'none';
+        DOMElements.aboutAppIcon.style.display = 'none';
+    }
+
+    const appInfo = await window.electronAPI.getAppInfo();
+    if (appInfo) {
+        DOMElements.aboutAppName.textContent = appInfo.productName || 'Caption Creator';
+        DOMElements.aboutAppVersion.textContent = appInfo.version || 'Unknown';
+        DOMElements.aboutAppAuthor.textContent = appInfo.author || 'Merserk';
     }
 
     // --- Custom Titlebar Controls ---
     document.getElementById('titlebar-minimize').addEventListener('click', () => window.electronAPI.minimizeWindow());
     document.getElementById('titlebar-maximize').addEventListener('click', () => window.electronAPI.maximizeWindow());
     document.getElementById('titlebar-close').addEventListener('click', () => window.electronAPI.closeWindow());
-    document.getElementById('titlebar-online').addEventListener('click', () => window.electronAPI.openOnlineLink());
 
     await populateModelList();
     setupCustomSlider();
+    await refreshOutputFolderPreference();
+    await loadCustomPrompt();
+    updateGenerationTypeUI();
+
+    const setupModalDismissal = (overlay, closeButton) => {
+        closeButton.addEventListener('click', () => {
+            overlay.classList.remove('is-visible');
+        });
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('is-visible');
+            }
+        });
+    };
+
+    DOMElements.configurationButton.addEventListener('click', () => {
+        DOMElements.configurationModalOverlay.classList.add('is-visible');
+    });
+    setupModalDismissal(DOMElements.configurationModalOverlay, DOMElements.configurationModalCloseButton);
+    setupModalDismissal(DOMElements.queueModalOverlay, DOMElements.queueModalCloseButton);
+    DOMElements.queueButtons.forEach(btn => btn.addEventListener('click', openQueueModal));
+    DOMElements.queueClearFinishedButton.addEventListener('click', clearFinishedQueueJobs);
+    DOMElements.queueList.addEventListener('click', async (event) => {
+        const removeButton = event.target.closest('.queue-remove-button');
+        if (!removeButton) return;
+        await removePendingQueueJob(removeButton.dataset.jobId);
+    });
+    DOMElements.outputFolderButton.addEventListener('click', handleOutputFolderButtonClick);
+    DOMElements.customPromptInput.addEventListener('input', scheduleCustomPromptSave);
+
+    DOMElements.aboutButton.addEventListener('click', () => {
+        DOMElements.aboutModalOverlay.classList.add('is-visible');
+    });
+    setupModalDismissal(DOMElements.aboutModalOverlay, DOMElements.aboutModalCloseButton);
+    DOMElements.aboutWebsiteButton.addEventListener('click', () => window.electronAPI.openMainLink());
+    DOMElements.aboutOnlineButton.addEventListener('click', () => window.electronAPI.openOnlineLink());
+    DOMElements.aboutPatreonButton.addEventListener('click', () => window.electronAPI.openPatreonLink());
 
     // --- Model Modal Event Listeners ---
     DOMElements.modelSelectButton.addEventListener('click', () => {
         DOMElements.modelSelectModalOverlay.classList.add('is-visible');
+        if (appState.selectedModelKey === LM_STUDIO_MODEL_KEY) {
+            renderLmStudioModelPanel();
+        } else if (appState.selectedModelKey === OLLAMA_MODEL_KEY) {
+            renderOllamaModelPanel();
+        } else {
+            DOMElements.lmStudioModelPanel.hidden = true;
+        }
+        if (appState.selectedModelKey === LM_STUDIO_MODEL_KEY && appState.lmStudioConnected) {
+            refreshLmStudioModels();
+        } else if (appState.selectedModelKey === OLLAMA_MODEL_KEY && appState.ollamaConnected) {
+            refreshOllamaModels();
+        }
     });
     DOMElements.modelModalCloseButton.addEventListener('click', () => {
         DOMElements.modelSelectModalOverlay.classList.remove('is-visible');
@@ -466,10 +1209,6 @@ window.addEventListener('DOMContentLoaded', async () => {
                 clickedOption.classList.add('active');
 
                 if (container.id === 'mode-switch') {
-                    if (appState.isRunning) {
-                        DOMElements.statusOutput.value = 'Please wait until the current process finishes.';
-                        return;
-                    }
                     const isSingleMode = clickedOption.dataset.value === 'Single Image';
                     DOMElements.singleUploadBox.style.display = isSingleMode ? 'flex' : 'none';
                     DOMElements.batchUploadBox.style.display = isSingleMode ? 'none' : 'flex';
@@ -491,12 +1230,15 @@ window.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     updateStartButtonState();
+                } else if (container.id === 'gen-type-switch') {
+                    updateGenerationTypeUI();
                 }
             });
         });
     }
     setupSwitches();
     updateStartButtonState();
+    updateQueueButtonLabels();
 
     window.addEventListener('dragover', (event) => {
         event.preventDefault();
@@ -514,15 +1256,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const uploadBox = DOMElements.singleUploadBox;
     uploadBox.addEventListener('click', async () => {
-        if (appState.isRunning) {
-            DOMElements.statusOutput.value = 'Please wait until the current process finishes.';
-            return;
-        }
         const newPath = await window.electronAPI.openFileDialog();
         await handleFileSelection(newPath);
     });
     uploadBox.addEventListener('dragover', (event) => {
-        if (appState.isRunning) return;
         event.preventDefault();
         uploadBox.classList.add('drag-over');
     });
@@ -530,7 +1267,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         uploadBox.classList.remove('drag-over');
     });
     uploadBox.addEventListener('drop', async (event) => {
-        if (appState.isRunning) return;
         event.preventDefault();
         uploadBox.classList.remove('drag-over');
         const files = getDroppedFiles(event);
@@ -541,19 +1277,18 @@ window.addEventListener('DOMContentLoaded', async () => {
             await handleFileSelection(newPath);
         }
     });
+    uploadBox.addEventListener('contextmenu', async (event) => {
+        event.preventDefault();
+        await resetSelectedImages('Single Image');
+    });
 
     DOMElements.batchUploadBox.addEventListener('click', async () => {
-        if (appState.isRunning) {
-            DOMElements.statusOutput.value = 'Please wait until the current process finishes.';
-            return;
-        }
         const result = await window.electronAPI.openBatchDialog();
         await handleBatchSelection(result);
     });
-    DOMElements.batchUploadBox.addEventListener('dragover', (event) => { if (appState.isRunning) return; event.preventDefault(); DOMElements.batchUploadBox.classList.add('drag-over'); });
+    DOMElements.batchUploadBox.addEventListener('dragover', (event) => { event.preventDefault(); DOMElements.batchUploadBox.classList.add('drag-over'); });
     DOMElements.batchUploadBox.addEventListener('dragleave', () => { DOMElements.batchUploadBox.classList.remove('drag-over'); });
     DOMElements.batchUploadBox.addEventListener('drop', async (event) => {
-        if (appState.isRunning) return;
         event.preventDefault();
         DOMElements.batchUploadBox.classList.remove('drag-over');
         const imagePaths = Array.from(new Set(
@@ -567,25 +1302,35 @@ window.addEventListener('DOMContentLoaded', async () => {
             await handleBatchSelection(result);
         }
     });
+    DOMElements.batchUploadBox.addEventListener('contextmenu', async (event) => {
+        event.preventDefault();
+        await resetSelectedImages('Batch Processing');
+    });
 
-    DOMElements.startButtons.forEach(btn => btn.addEventListener('click', startGenerationFlow));
+    DOMElements.startButtons.forEach(btn => btn.addEventListener('click', enqueueGenerationFlow));
     DOMElements.stopButtons.forEach(btn => btn.addEventListener('click', () => window.electronAPI.stopGeneration()));
 
     DOMElements.copyButton.addEventListener('click', () => {
-        navigator.clipboard.writeText(DOMElements.singleTextOutput.value);
+        const copyText = appState.singleOutputGenType === 'illustrious'
+            ? formatIllustriousClipboardText(DOMElements.singleTextOutput.value, DOMElements.singleNegativeOutput.value)
+            : DOMElements.singleTextOutput.value;
+        navigator.clipboard.writeText(copyText);
         DOMElements.copyButton.textContent = 'Copied!';
         DOMElements.copyButton.classList.add('copied-success');
         setTimeout(() => { DOMElements.copyButton.textContent = 'Copy to Clipboard'; DOMElements.copyButton.classList.remove('copied-success'); }, 2000);
     });
     DOMElements.copyButtonBatch.addEventListener('click', () => {
-        navigator.clipboard.writeText(DOMElements.batchTextOutput.value);
+        const copyText = appState.batchOutputGenType === 'illustrious'
+            ? formatIllustriousClipboardText(DOMElements.batchTextOutput.value, DOMElements.batchNegativeOutput.value)
+            : DOMElements.batchTextOutput.value;
+        navigator.clipboard.writeText(copyText);
         DOMElements.copyButtonBatch.textContent = 'Copied!';
         DOMElements.copyButtonBatch.classList.add('copied-success');
         setTimeout(() => { DOMElements.copyButtonBatch.textContent = 'Copy to Clipboard'; DOMElements.copyButtonBatch.classList.remove('copied-success'); }, 2000);
     });
     DOMElements.downloadZipButton.addEventListener('click', async () => {
         DOMElements.statusOutput.value = 'Creating ZIP archive...';
-        const result = await window.electronAPI.createZipArchive();
+        const result = await window.electronAPI.createZipArchive(appState.latestOutputJobId);
         DOMElements.statusOutput.value = result.message;
     });
     DOMElements.openFolderSingle.addEventListener('click', () => window.electronAPI.openOutputFolder());
@@ -625,78 +1370,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
 async function startGenerationFlow() {
-    if (!appState.selectedModelKey) {
-        alert("Please select a model first.");
-        return;
-    }
-    const currentMode = document.querySelector('#mode-switch .switch-option.active').dataset.value;
-    const hasSelection = currentMode === 'Single Image' ? appState.singleHasSelection : appState.batchHasSelection;
-    if (!hasSelection) {
-        DOMElements.statusOutput.value = currentMode === 'Single Image'
-            ? 'Please select a single image before starting.'
-            : 'Please select batch images before starting.';
-        return;
-    }
-
-    if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        const result = await window.electronAPI.checkLmStudioConnection();
-        if (!result.success) {
-            updateLmStudioUI(false);
-            alert("Connection to LM Studio lost. Please ensure LM Studio is running and retry connection.");
-            return;
-        }
-        stopLmStudioHeartbeat();
-    }
-
-    setRunningState(true);
-    showGenerationStartupStatus(appState.selectedModelKey);
-
-    const options = {
-        mode: currentMode,
-        gen_type: document.querySelector('#gen-type-switch .switch-option.active').dataset.value,
-        trigger_words: document.getElementById('trigger-words-input').value,
-        prompt_enrichment: document.getElementById('prompt-enrichment-input').value,
-        max_words: DOMElements.customSlider.hiddenInput.value,
-        single_paragraph: true,
-        desired_model_key: appState.selectedModelKey,
-        low_vram: DOMElements.lowVramInput.checked,
-        keep_model_loaded: DOMElements.keepModelLoadedInput.checked,
-        shutdown_pc: document.getElementById('shutdown-pc-input').checked,
-    };
-
-    const outputFiles = await window.electronAPI.startGeneration(options);
-
-    if (options.mode === 'Batch Processing') {
-        DOMElements.singleImageOutput.style.display = 'none';
-        DOMElements.batchGalleryOutput.style.display = 'grid';
-        DOMElements.batchGalleryOutput.innerHTML = '';
-        if (outputFiles) {
-            outputFiles.forEach(fileUrl => {
-                const img = document.createElement('img');
-                img.src = fileUrl + '?' + new Date().getTime();
-                img.dataset.filepath = fileUrl;
-                img.classList.add('blurred');
-                img.addEventListener('click', handleGalleryClick);
-                DOMElements.batchGalleryOutput.appendChild(img);
-            });
-        }
-    } else {
-        DOMElements.batchGalleryOutput.style.display = 'none';
-        DOMElements.singleImageOutput.style.display = 'block';
-        if (outputFiles && outputFiles.length > 0) {
-            DOMElements.singleImageOutput.src = outputFiles[0] + '?' + new Date().getTime();
-            DOMElements.singleImageOutput.classList.add('blurred');
-        } else {
-            DOMElements.singleImageOutput.src = '';
-            DOMElements.singleImageOutput.classList.remove('blurred');
-        }
-    }
-
-    window.electronAPI.beginPythonProcess(options);
+    return enqueueGenerationFlow();
 }
 
 // --- IPC Event Handlers (from Main) ---
-window.electronAPI.onStatusUpdate(message => {
+window.electronAPI.onStatusUpdate(payload => {
+    const { jobId, message } = normalizeJobPayload(payload, appState);
+    if (jobId && appState.activeQueueJobId && jobId !== appState.activeQueueJobId) return;
+
     clearStatusAnimation();
     DOMElements.statusOutput.value = message;
     DOMElements.statusOutput.scrollTop = DOMElements.statusOutput.scrollHeight;
@@ -716,7 +1397,10 @@ window.electronAPI.onStatusUpdate(message => {
     }
 });
 
-window.electronAPI.onProgressUpdate(data => {
+window.electronAPI.onProgressUpdate(payload => {
+    const { jobId, data } = normalizeJobPayload(payload, appState);
+    if (jobId && appState.activeQueueJobId && jobId !== appState.activeQueueJobId) return;
+
     clearStatusAnimation();
     const progressPercentage = 10 + (data.percentage * 0.9);
     DOMElements.progressBar.style.width = `${progressPercentage}%`;
@@ -724,7 +1408,10 @@ window.electronAPI.onProgressUpdate(data => {
     DOMElements.statusOutput.value = statusString;
 });
 
-window.electronAPI.onImageComplete(data => {
+window.electronAPI.onImageComplete(payload => {
+    const { jobId, data } = normalizeJobPayload(payload, appState);
+    if (jobId && appState.activeQueueJobId && jobId !== appState.activeQueueJobId) return;
+
     const imageToUnblur = DOMElements.batchGalleryOutput.querySelector(`img:nth-child(${data.index})`);
     if (imageToUnblur) {
         imageToUnblur.classList.remove('blurred');
@@ -734,50 +1421,47 @@ window.electronAPI.onImageComplete(data => {
     }
 });
 
-window.electronAPI.onGenerationComplete(async () => {
-    clearStatusAnimation();
-    const mode = document.querySelector('#mode-switch .switch-option.active').dataset.value;
+window.electronAPI.onGenerationComplete(async (payload) => {
+    const { jobId } = normalizeJobPayload(payload, appState);
+    const job = getQueueJob(appState, jobId);
+    if (!job || appState.activeQueueJobId !== job.id) return;
 
-    if (mode === 'Single Image') {
-        DOMElements.statusOutput.value = 'Task complete!';
-        const outputFiles = await window.electronAPI.getOutputFiles();
+    clearStatusAnimation();
+
+    if (job.options.mode === 'Single Image') {
+        DOMElements.statusOutput.value = `Task complete! ${job.label}`;
+        const outputFiles = await window.electronAPI.getOutputFiles(job.id);
         if (outputFiles.length > 0) {
             DOMElements.singleImageOutput.classList.remove('blurred');
             DOMElements.singleImageOutput.src = outputFiles[0] + '?' + new Date().getTime();
             const textContent = await window.electronAPI.getTextContent(outputFiles[0]);
-            DOMElements.singleTextOutput.value = textContent.trim();
+            displaySingleTextOutput(textContent, job.options.gen_type);
         }
     } else {
-        DOMElements.statusOutput.value = 'Task complete!';
+        DOMElements.statusOutput.value = `Task complete! ${job.label}`;
     }
 
-    if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        startLmStudioHeartbeat();
-    }
-
-    setRunningState(false);
-    setTimeout(() => {
-        DOMElements.statusOutput.value += "\nReady for the next task.";
-        DOMElements.statusOutput.scrollTop = DOMElements.statusOutput.scrollHeight;
-    }, 1000);
+    await finishActiveQueueJob(job, 'completed');
 });
 
-window.electronAPI.onGenerationError(message => {
+window.electronAPI.onGenerationError(async (payload) => {
+    const { jobId, message } = normalizeJobPayload(payload, appState);
+    const job = getQueueJob(appState, jobId);
+    if (!job || appState.activeQueueJobId !== job.id) return;
+
     clearStatusAnimation();
     DOMElements.statusOutput.value = `ERROR: \n${message}`;
-    setRunningState(false);
-    if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        startLmStudioHeartbeat();
-    }
+    await finishActiveQueueJob(job, 'failed', message);
 });
 
-window.electronAPI.onGenerationStopped(() => {
+window.electronAPI.onGenerationStopped(async (payload) => {
+    const { jobId } = normalizeJobPayload(payload, appState);
+    const job = getQueueJob(appState, jobId);
+    if (!job || appState.activeQueueJobId !== job.id) return;
+
     clearStatusAnimation();
-    setRunningState(false);
     DOMElements.statusOutput.value += '\nStop requested by user...';
-    if (appState.selectedModelKey === 'Custom (LM Studio)') {
-        startLmStudioHeartbeat();
-    }
+    await finishActiveQueueJob(job, 'stopped');
 });
 
 // --- Download & Delete Handlers ---
@@ -875,19 +1559,54 @@ window.electronAPI.onDownloadError(async (data) => {
 });
 
 function updateLmStudioUI(connected) {
-    const statusSpan = document.getElementById('lm-studio-status');
-    if (!statusSpan) return;
+    const wasConnected = appState.lmStudioConnected;
+    const isSelected = appState.selectedModelKey === LM_STUDIO_MODEL_KEY;
 
     if (connected) {
         appState.lmStudioConnected = true;
-        statusSpan.textContent = 'Connected';
-        statusSpan.className = 'model-status-text connected';
+        updateLmStudioStatusText();
+        if (isSelected) {
+            renderLmStudioModelPanel();
+        }
+        if (!wasConnected && isSelected) {
+            refreshLmStudioModels();
+        }
     } else {
         appState.lmStudioConnected = false;
-        appState.lmStudioDotCount = (appState.lmStudioDotCount % 3) + 1;
-        const dots = '.'.repeat(appState.lmStudioDotCount);
-        statusSpan.innerHTML = `Searching<span class="searching-dots">${dots}</span>`;
-        statusSpan.className = 'model-status-text searching';
+        appState.lmStudioModels = [];
+        appState.lmStudioModelError = '';
+        appState.lmStudioLoadingModelKey = null;
+        appState.lmStudioEjectingModelKey = null;
+        updateLmStudioStatusText();
+        if (isSelected) {
+            renderLmStudioModelPanel();
+        }
+    }
+}
+
+function updateOllamaUI(connected) {
+    const wasConnected = appState.ollamaConnected;
+    const isSelected = appState.selectedModelKey === OLLAMA_MODEL_KEY;
+
+    if (connected) {
+        appState.ollamaConnected = true;
+        updateOllamaStatusText();
+        if (isSelected) {
+            renderOllamaModelPanel();
+        }
+        if (!wasConnected && isSelected) {
+            refreshOllamaModels();
+        }
+    } else {
+        appState.ollamaConnected = false;
+        appState.ollamaModels = [];
+        appState.ollamaModelError = '';
+        appState.ollamaLoadingModelKey = null;
+        appState.ollamaEjectingModelKey = null;
+        updateOllamaStatusText();
+        if (isSelected) {
+            renderOllamaModelPanel();
+        }
     }
 }
 
@@ -908,6 +1627,23 @@ function startLmStudioHeartbeat() {
     check();
 }
 
+function startOllamaHeartbeat() {
+    if (appState.ollamaHeartbeatInterval) {
+        clearTimeout(appState.ollamaHeartbeatInterval);
+        appState.ollamaHeartbeatInterval = null;
+    }
+
+    const check = async () => {
+        const result = await window.electronAPI.checkOllamaConnection();
+        updateOllamaUI(result.success);
+
+        const nextInterval = appState.ollamaConnected ? 5000 : 1000;
+        appState.ollamaHeartbeatInterval = setTimeout(check, nextInterval);
+    };
+
+    check();
+}
+
 function stopLmStudioHeartbeat() {
     if (appState.lmStudioHeartbeatInterval) {
         clearTimeout(appState.lmStudioHeartbeatInterval);
@@ -915,10 +1651,9 @@ function stopLmStudioHeartbeat() {
     }
 }
 
-async function handleGalleryClick(event) {
-    document.querySelectorAll('.gallery img.selected').forEach(img => img.classList.remove('selected'));
-    const img = event.target;
-    img.classList.add('selected');
-    const textContent = await window.electronAPI.getTextContent(img.dataset.filepath);
-    DOMElements.batchTextOutput.value = textContent.trim();
+function stopOllamaHeartbeat() {
+    if (appState.ollamaHeartbeatInterval) {
+        clearTimeout(appState.ollamaHeartbeatInterval);
+        appState.ollamaHeartbeatInterval = null;
+    }
 }

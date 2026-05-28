@@ -10,11 +10,12 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import (
     build_user_prompt,
+    build_progress_payload,
     encode_image,
     format_generation_output,
-    get_output_extension,
     list_image_files,
     send_json_message,
+    write_generation_output,
 )
 
 LM_HOST = 'http://127.0.0.1:1234'
@@ -71,9 +72,20 @@ def _select_model_key(models):
     return None
 
 
-def _resolve_model_key(timeout=10):
+def _resolve_model_key(timeout=10, selected_model_key=''):
     payload = _request_json('GET', '/api/v1/models', timeout=timeout)
     models = payload.get('models') or []
+
+    if selected_model_key:
+        for model in models:
+            if (model.get('key') or model.get('id')) == selected_model_key:
+                if model.get('type') not in (None, 'llm'):
+                    raise RuntimeError('Selected LM Studio model is not an LLM.')
+                if not model.get('capabilities', {}).get('vision'):
+                    raise RuntimeError('Selected LM Studio model does not support vision input.')
+                return selected_model_key
+        raise RuntimeError('Selected LM Studio model was not found. Refresh the model list and select it again.')
+
     model_key = _select_model_key(models)
     if not model_key:
         raise RuntimeError('No LM Studio LLM model was found. Load a vision model in LM Studio first.')
@@ -211,28 +223,15 @@ def process_images_loop_lm(gen_params, model_key, resize_max=1280, image_format=
             kwargs.get('trigger_words', ''),
         )
 
-        output_file_name = os.path.splitext(image_file)[0] + get_output_extension(gen_type)
-        with open(os.path.join(kwargs['output_dir'], output_file_name), 'w', encoding='utf-8') as out_file:
-            out_file.write(final_output)
-
-        elapsed = time.time() - start_time
-        time_per_img = elapsed / index
-        eta = (total_images - index) * time_per_img
-        send_json_message('progress', {
-            'current': index,
-            'total': total_images,
-            'percentage': (index / total_images) * 100,
-            'elapsed': elapsed,
-            'eta': eta,
-            'time_per_img': time_per_img,
-        })
+        write_generation_output(kwargs['output_dir'], image_file, gen_type, final_output)
+        send_json_message('progress', build_progress_payload(index, total_images, start_time))
         send_json_message('image-complete', {'index': index})
         if request_pause_seconds > 0 and index < total_images:
             time.sleep(request_pause_seconds)
 
 
-def run_lm_studio_generation(config, **kwargs):
-    send_json_message('status', 'Contacting LM Studio... Resolving loaded model.')
+def run_lm_studio_generation(config, selected_model_key='', **kwargs):
+    send_json_message('status', 'Contacting LM Studio... Resolving selected model.')
 
     timeout = config.getint('generation_params', 'timeout', fallback=600)
     resize_max = config.getint('generation_params', 'resize_max', fallback=1280)
@@ -240,7 +239,7 @@ def run_lm_studio_generation(config, **kwargs):
     context_length = config.getint('generation_params', 'context_length', fallback=16384)
     request_pause_seconds = config.getfloat('generation_params', 'request_pause_seconds', fallback=0.25)
 
-    model_key = _resolve_model_key(timeout=min(timeout, 30))
+    model_key = _resolve_model_key(timeout=min(timeout, 30), selected_model_key=selected_model_key)
     process_images_loop_lm(
         {'timeout': timeout},
         model_key=model_key,
