@@ -257,9 +257,7 @@ function attachPreparedBackendHandlers(ctx, backendProcess, runJobId) {
                         : { jobId: runJobId, ...(json.data || {}) };
                     sendToRenderer(ctx, eventName, eventPayload);
                 }
-            } catch (e) {
-                console.log(`[Python STDOUT]: ${line}`);
-            }
+            } catch {}
         });
     });
 
@@ -294,6 +292,7 @@ function attachPreparedBackendHandlers(ctx, backendProcess, runJobId) {
             if (ctx.state.currentBackendJobId === runJobId) {
                 ctx.state.currentBackendJobId = null;
             }
+            console.error('Generation failed:', message);
             sendToRenderer(ctx, 'generation-error', { jobId: runJobId, message });
         } else {
             if (ctx.state.currentBackendJobId === runJobId) {
@@ -306,6 +305,7 @@ function attachPreparedBackendHandlers(ctx, backendProcess, runJobId) {
 
 function attachLegacyBackendHandlers(ctx, backendProcess) {
     let backendHadDetailedError = false;
+    let detailedErrorMessage = '';
 
     const eventTypeMap = {
         status: 'status-update',
@@ -320,17 +320,19 @@ function attachLegacyBackendHandlers(ctx, backendProcess) {
                 const json = JSON.parse(line);
                 const eventName = eventTypeMap[json.type];
                 if (eventName) {
-                    if (json.type === 'error') backendHadDetailedError = true;
+                    if (json.type === 'error') {
+                        backendHadDetailedError = true;
+                        detailedErrorMessage = detailedErrorMessage || json.message || json.data || '';
+                    }
                     sendToRenderer(ctx, eventName, json.message || json.data);
                 }
-            } catch (e) {
-                console.log(`[Python STDOUT]: ${line}`);
-            }
+            } catch {}
         });
     });
 
     backendProcess.stderr.on('data', (data) => {
         backendHadDetailedError = true;
+        detailedErrorMessage = detailedErrorMessage || data.toString();
         sendToRenderer(ctx, 'generation-error', data.toString());
     });
 
@@ -338,8 +340,10 @@ function attachLegacyBackendHandlers(ctx, backendProcess) {
         if (code === 0) {
             sendToRenderer(ctx, 'generation-complete');
             await stopAllBackendProcesses(ctx);
-        } else if (ctx.state.backendProcess && !backendHadDetailedError) {
-            sendToRenderer(ctx, 'generation-error', `Process exited with non-zero code: ${code}.`);
+        } else if (ctx.state.backendProcess) {
+            const message = detailedErrorMessage || `Process exited with non-zero code: ${code}.`;
+            console.error('Generation failed:', message);
+            if (!backendHadDetailedError) sendToRenderer(ctx, 'generation-error', message);
         }
         ctx.state.backendProcess = null;
     });

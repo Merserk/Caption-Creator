@@ -201,11 +201,27 @@ function getFilePath(file) {
     return '';
 }
 
+function renderBatchSelectionPreview(previewUrls = []) {
+    DOMElements.batchUploadPreviewGrid.innerHTML = '';
+
+    previewUrls.forEach(previewUrl => {
+        const img = document.createElement('img');
+        img.src = previewUrl + '?' + new Date().getTime();
+        img.alt = '';
+        DOMElements.batchUploadPreviewGrid.appendChild(img);
+    });
+
+    const hasPreviews = previewUrls.length > 0;
+    DOMElements.batchUploadPlaceholder.style.display = hasPreviews ? 'none' : 'flex';
+    DOMElements.batchUploadPreviewGrid.style.display = hasPreviews ? 'grid' : 'none';
+}
+
 async function handleBatchSelection(result) {
     if (result) {
         DOMElements.statusOutput.value = `Successfully staged ${result.count} files for processing:\n${result.filenames}`;
         appState.batchFilenamesText = result.filenames || '';
         appState.batchHasSelection = Array.isArray(result.paths) && result.paths.length > 0;
+        renderBatchSelectionPreview(result.previewUrls || []);
     }
     updateStartButtonState();
 }
@@ -222,6 +238,7 @@ async function resetSelectedImages(mode) {
     } else {
         appState.batchHasSelection = false;
         appState.batchFilenamesText = '';
+        renderBatchSelectionPreview();
         DOMElements.statusOutput.value = 'Batch image selection reset.';
     }
 
@@ -547,10 +564,10 @@ async function enqueueGenerationFlow() {
 }
 
 function updateModelStatusTexts() {
-    const { modelOptionsPanel } = DOMElements;
-    if (!modelOptionsPanel) return;
+    const { modelOptionsList } = DOMElements;
+    if (!modelOptionsList) return;
 
-    const modelItems = modelOptionsPanel.querySelectorAll('.model-selector-item:not([data-model-key="Custom (LM Studio)"]):not([data-model-key="Custom (Ollama)"])');
+    const modelItems = modelOptionsList.querySelectorAll('.model-selector-item:not([data-model-key="Custom (LM Studio)"]):not([data-model-key="Custom (Ollama)"])');
 
     modelItems.forEach(item => {
         const modelKey = item.dataset.modelKey;
@@ -899,9 +916,9 @@ async function handleOllamaModelEject(model) {
 // --- UI Population ---
 async function populateModelList() {
     const models = await window.electronAPI.getModelAvailability();
-    const { modelOptionsPanel } = DOMElements;
+    const { modelOptionsList } = DOMElements;
 
-    modelOptionsPanel.innerHTML = '';
+    modelOptionsList.innerHTML = '';
     let firstAvailableModel = null;
 
     models.forEach(model => {
@@ -985,7 +1002,7 @@ async function populateModelList() {
             itemContainer.appendChild(progressContainer);
         }
 
-        modelOptionsPanel.appendChild(itemContainer);
+        modelOptionsList.appendChild(itemContainer);
 
         itemContainer.addEventListener('click', () => {
             if (input.disabled) return;
@@ -1023,7 +1040,7 @@ async function populateModelList() {
     }
     updateSelectedModelValue();
     if (appState.selectedModelKey) {
-        const selectedItem = modelOptionsPanel.querySelector(`.model-selector-item[data-model-key="${appState.selectedModelKey}"]`);
+        const selectedItem = modelOptionsList.querySelector(`.model-selector-item[data-model-key="${appState.selectedModelKey}"]`);
         if (selectedItem) selectedItem.classList.add('is-selected');
     }
     updateCheckboxStates();
@@ -1075,8 +1092,6 @@ function setupCustomSlider() {
     setSliderValue(parseInt(slider.hiddenInput.value, 10));
 }
 
-
-
 // --- Event Listeners ---
 window.addEventListener('DOMContentLoaded', async () => {
     DOMElements = collectDOMElements();
@@ -1097,11 +1112,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const iconSrc = await window.electronAPI.getAppIcon();
     if (iconSrc) {
-        DOMElements.appIcon.src = iconSrc;
         DOMElements.aboutAppIcon.src = iconSrc;
-        DOMElements.appIcon.addEventListener('click', () => window.electronAPI.openMainLink());
     } else {
-        DOMElements.appIcon.style.display = 'none';
         DOMElements.aboutAppIcon.style.display = 'none';
     }
 
@@ -1485,7 +1497,6 @@ async function handleDownloadClick(event) {
     try {
         await window.electronAPI.downloadModel(modelKey);
     } catch (e) {
-        console.error(`Download invocation failed for ${modelKey}`, e);
     }
 }
 

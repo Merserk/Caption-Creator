@@ -27,11 +27,6 @@
             </button>
         </div>
     </div>
-    <div class="title-container">
-        <div class="title-left-group">
-            <img src="" id="app-icon" class="title-icon">
-        </div>
-    </div>
     <div class="container">
         <!-- LEFT COLUMN -->
         <div class="column column-left">
@@ -41,10 +36,21 @@
                     <p>Click to Upload or Drag & Drop Image</p>
                 </div>
                 <img id="single-image-preview" src="" style="display: none;" />
+                <svg class="upload-box-highlight" aria-hidden="true">
+                    <rect class="upload-box-highlight-glow"></rect>
+                    <rect class="upload-box-highlight-line"></rect>
+                </svg>
             </div>
 
             <div id="batch-upload-box" class="upload-box" style="display: none;">
-                <p>Click to Upload or Drag & Drop Batch</p>
+                <div id="batch-upload-placeholder">
+                    <p>Click to Upload or Drag & Drop Batch</p>
+                </div>
+                <div id="batch-upload-preview-grid" class="batch-upload-preview-grid"></div>
+                <svg class="upload-box-highlight" aria-hidden="true">
+                    <rect class="upload-box-highlight-glow"></rect>
+                    <rect class="upload-box-highlight-line"></rect>
+                </svg>
             </div>
 
             <div class="gr-group">
@@ -84,12 +90,21 @@
 
             <div class="left-action-stack">
                 <button type="button" id="configuration-button" class="left-action-button single-line-action">
+                    <svg class="left-action-icon settings-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3.5a2 2 0 0 1 2 2v.35a7 7 0 0 1 1.55.9l.3-.18a2 2 0 1 1 2 3.46l-.3.18c.08.52.08 1.06 0 1.58l.3.18a2 2 0 1 1-2 3.46l-.3-.18a7 7 0 0 1-1.55.9v.35a2 2 0 1 1-4 0v-.35a7 7 0 0 1-1.55-.9l-.3.18a2 2 0 1 1-2-3.46l.3-.18a7 7 0 0 1 0-1.58l-.3-.18a2 2 0 1 1 2-3.46l.3.18a7 7 0 0 1 1.55-.9V5.5a2 2 0 0 1 2-2z"></path>
+                        <circle cx="12" cy="11" r="2.5"></circle>
+                    </svg>
                     <div class="left-action-content">
-                        <span class="left-action-label">Configuration</span>
+                        <span class="left-action-label">Settings</span>
                     </div>
                 </button>
 
                 <button type="button" id="model-select-button" class="left-action-button model-select-button">
+                    <svg class="left-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                        <circle cx="9" cy="12" r="3"></circle>
+                        <path d="M15 9h3M15 12h3M15 15h3M6 19v2M10 19v2M14 19v2M18 19v2"></path>
+                    </svg>
                     <div class="left-action-content">
                         <span class="left-action-label">Model / VRAM Configuration</span>
                         <span id="selected-model-value" class="left-action-value">Loading...</span>
@@ -97,6 +112,10 @@
                 </button>
 
                 <button type="button" id="about-button" class="left-action-button single-line-action">
+                    <svg class="left-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M9.75 9a2.3 2.3 0 1 1 3.68 1.84c-.84.63-1.43 1.02-1.43 2.16M12 16.5h.01"></path>
+                    </svg>
                     <div class="left-action-content">
                         <span class="left-action-label">About</span>
                     </div>
@@ -161,7 +180,11 @@
     <!-- MODAL: Queue -->
     <div id="queue-modal-overlay" class="modal-overlay">
         <div id="queue-modal-content" class="simple-modal-content queue-modal-content">
-            <button id="queue-modal-close-button" class="modal-close-button">×</button>
+            <button id="queue-modal-close-button" class="modal-close-button" aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </button>
             <div class="modal-panel simple-modal-panel queue-modal-panel">
                 <div class="simple-modal-header queue-modal-header">
                     <div>
@@ -178,13 +201,17 @@
         </div>
     </div>
 
-    <!-- MODAL: Configuration -->
+    <!-- MODAL: Settings -->
     <div id="configuration-modal-overlay" class="modal-overlay">
         <div id="configuration-modal-content" class="simple-modal-content">
-            <button id="configuration-modal-close-button" class="modal-close-button">×</button>
+            <button id="configuration-modal-close-button" class="modal-close-button" aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </button>
             <div class="modal-panel simple-modal-panel">
                 <div class="simple-modal-header">
-                    <h2>Configuration</h2>
+                    <h2>Settings</h2>
                     <p>Generation behavior</p>
                 </div>
                 <div class="checkbox-button-group">
@@ -207,9 +234,19 @@
     <!-- MODAL: Model Selection -->
     <div id="model-select-modal-overlay" class="modal-overlay">
         <div id="model-select-modal-content" class="model-select-modal-content">
-            <button id="model-modal-close-button" class="modal-close-button">×</button>
+            <button id="model-modal-close-button" class="modal-close-button" aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </button>
             <div id="model-options-panel" class="modal-panel">
-                <!-- JS will populate this -->
+                <div class="simple-modal-header model-options-header">
+                    <h2>Model / VRAM Configuration</h2>
+                    <p>Select a model for caption generation</p>
+                </div>
+                <div id="model-options-list" class="model-options-list">
+                    <!-- JS will populate this -->
+                </div>
             </div>
             <div id="lm-studio-model-panel" class="lm-studio-model-panel" hidden>
                 <div class="lm-studio-model-panel-header">
@@ -224,7 +261,11 @@
     <!-- MODAL: About -->
     <div id="about-modal-overlay" class="modal-overlay">
         <div id="about-modal-content" class="simple-modal-content">
-            <button id="about-modal-close-button" class="modal-close-button">×</button>
+            <button id="about-modal-close-button" class="modal-close-button" aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </button>
             <div class="modal-panel simple-modal-panel about-modal-panel">
                 <div class="about-header">
                     <img src="" id="about-app-icon" class="about-app-icon" alt="">

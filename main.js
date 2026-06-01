@@ -11,8 +11,6 @@ const { registerModelIpc } = require('./src/main/models');
 
 const ctx = createAppContext({ app, packageInfo, rootDir: __dirname });
 
-console.log(`Logging to: ${ctx.appLogger.logFilePath}`);
-
 registerGenerationIpc(ctx);
 registerModelIpc(ctx);
 registerFileIpc(ctx);

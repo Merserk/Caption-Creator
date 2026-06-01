@@ -197,7 +197,8 @@ async function processBatchFiles(ctx, filePaths) {
         stagedName: fileName,
         originalName: fileName,
     })));
-    return { count: filenames.length, filenames: filenames.join('\n'), paths: filePaths };
+    const previewUrls = filenames.map(fileName => url.pathToFileURL(path.join(ctx.paths.inputDirBatch, fileName)).href);
+    return { count: filenames.length, filenames: filenames.join('\n'), paths: filePaths, previewUrls };
 }
 
 module.exports = { registerFileIpc };

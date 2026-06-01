@@ -346,9 +346,7 @@ function registerModelIpc(ctx) {
                     if (normalized.vision) {
                         visionModels.push(normalized);
                     }
-                } catch (e) {
-                    console.warn(`Could not inspect Ollama model ${modelName}:`, e.message);
-                }
+                } catch {}
             }
 
             return { success: true, models: visionModels };
@@ -413,15 +411,13 @@ function registerModelIpc(ctx) {
                         }
                         json.data.modelKey = modelKey;
                         ctx.state.mainWindow.webContents.send(`download-${json.type}`, json.data);
-                    } catch (e) {
-                        console.log(`[Downloader STDOUT]: ${line}`);
-                    }
+                    } catch {}
                 });
             });
 
             downloaderProcess.stderr.on('data', (data) => {
                 const message = data.toString();
-                console.error(`[Downloader STDERR]: ${message}`);
+                detailedErrorMessage = detailedErrorMessage || message;
                 ctx.state.mainWindow.webContents.send('download-error', { modelKey, message });
             });
 
@@ -431,6 +427,7 @@ function registerModelIpc(ctx) {
                     resolve({ success: true });
                 } else {
                     const message = detailedErrorMessage || `Downloader exited with code ${code}.`;
+                    console.error(`Download failed for ${modelKey}:`, message);
                     if (!detailedErrorMessage) {
                         ctx.state.mainWindow.webContents.send('download-error', { modelKey, message });
                     }

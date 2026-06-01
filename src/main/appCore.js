@@ -42,13 +42,12 @@ function createAppPaths({ app, rootDir }) {
 
 function createAppContext({ app, packageInfo, rootDir }) {
     const paths = createAppPaths({ app, rootDir });
-    const appLogger = initLogging({ appExecRoot: paths.appExecRoot, isDev: paths.isDev });
+    initLogging(paths.appExecRoot);
 
     return {
         app,
         packageInfo,
         paths,
-        appLogger,
         state: {
             mainWindow: null,
             backendProcess: null,
@@ -90,9 +89,7 @@ function createWindow(ctx) {
     });
 
     ctx.state.mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-        const levelMap = { 0: 'INFO', 1: 'WARN', 2: 'ERROR', 3: 'DEBUG' };
-        const lvl = levelMap[level] || 'INFO';
-        console.log(`[Renderer:${lvl}] ${message} (${sourceId}:${line})`);
+        if (level === 2) console.error(`[Renderer] ${message} (${sourceId}:${line})`);
     });
 
     ctx.state.mainWindow.webContents.on('did-fail-load', (_event, _errorCode, errorDescription, validatedURL) => {
@@ -100,9 +97,6 @@ function createWindow(ctx) {
     });
 
     const htmlPath = path.join(paths.srcDir, 'index.html');
-    console.log('Loading HTML from:', htmlPath);
-    console.log('HTML file exists:', fs.existsSync(htmlPath));
-
     ctx.state.mainWindow.loadFile(htmlPath).catch(err => {
         console.error('Error loading HTML file:', err);
     });
@@ -110,13 +104,6 @@ function createWindow(ctx) {
 
 function registerLifecycle(ctx) {
     app.whenReady().then(() => {
-        console.log('App is ready');
-        console.log('isDev:', ctx.paths.isDev);
-        console.log('projectRoot:', ctx.paths.projectRoot);
-        console.log('srcDir:', ctx.paths.srcDir);
-        console.log('scriptsDir:', ctx.paths.scriptsDir);
-        console.log('assetsRoot:', ctx.paths.assetsRoot);
-
         loadAppSettings(ctx);
 
         try {
@@ -128,7 +115,6 @@ function registerLifecycle(ctx) {
             fs.emptyDirSync(ctx.paths.inputDirSingle);
             fs.emptyDirSync(ctx.paths.inputDirBatch);
             fs.emptyDirSync(ctx.paths.inputDirQueue);
-            console.log('Directories created successfully');
         } catch (error) {
             console.error('Error creating directories:', error);
         }
@@ -143,22 +129,11 @@ function registerLifecycle(ctx) {
     });
 
     app.on('window-all-closed', () => {
-        console.log('All windows closed');
         app.quit();
     });
 
     app.on('quit', async () => {
-        console.log('App quitting, stopping backend processes');
         await stopAllBackendProcesses(ctx);
-        ctx.appLogger.close();
-    });
-
-    process.on('uncaughtException', (error) => {
-        console.error('Uncaught Exception:', error);
-    });
-
-    process.on('unhandledRejection', (reason, promise) => {
-        console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     });
 }
 
@@ -168,9 +143,6 @@ function loadImageAsset(ctx, fileName, stateKey, label) {
         if (fs.existsSync(assetPath)) {
             const imageBuffer = fs.readFileSync(assetPath);
             ctx.state[stateKey] = 'data:image/png;base64,' + imageBuffer.toString('base64');
-            console.log(`${label} loaded successfully`);
-        } else {
-            console.warn(`${label} not found at:`, assetPath);
         }
     } catch (e) {
         console.error(`Could not load ${label.toLowerCase()}:`, e);
@@ -179,7 +151,7 @@ function loadImageAsset(ctx, fileName, stateKey, label) {
 
 function ensureConfigExists(filePath, name) {
     if (!fs.existsSync(filePath)) {
-        console.error(`[ERROR] Missing ${name} configuration at: ${filePath}`);
+        console.error(`Missing ${name} configuration at: ${filePath}`);
     }
 }
 

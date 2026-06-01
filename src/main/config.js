@@ -145,9 +145,7 @@ function readPromptConfigValue(filePath, key, fallback = '') {
             }
             return valueLines.join('\n').trim();
         }
-    } catch (e) {
-        console.warn(`Could not read ${key} from ${filePath}:`, e.message);
-    }
+    } catch {}
     return fallback;
 }
 
