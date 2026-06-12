@@ -9,7 +9,7 @@ if SCRIPT_DIR not in sys.path:
 
 from utils import send_json_message
 from lm_studio_backend import run_lm_studio_generation
-from koboldcpp_backend import run_koboldcpp_generation
+from llama_cpp_backend import run_llama_cpp_generation
 from ollama_backend import run_ollama_generation
 
 def get_backend_config_section(desired_model_key):
@@ -17,7 +17,7 @@ def get_backend_config_section(desired_model_key):
         return "lm_studio"
     if desired_model_key == "Custom (Ollama)":
         return "ollama"
-    return "koboldcpp"
+    return "llama_cpp"
 
 
 def build_runtime_config(config, backend_section):
@@ -42,12 +42,13 @@ def main():
         if len(sys.argv) < 14:
             raise ValueError("Insufficient arguments.")
         
-        input_dir, output_dir, config_path, koboldcpp_exe, models_dir, desired_model_key, \
+        input_dir, output_dir, config_path, llama_server_exe, models_dir, desired_model_key, \
         low_vram_str, gen_type, trigger_words, single_paragraph_str, max_words_str, \
         prompt_enrichment, _mode = sys.argv[1:14]
         lm_studio_model_key = sys.argv[14] if len(sys.argv) > 14 else ""
         ollama_model_key = sys.argv[15] if len(sys.argv) > 15 else ""
         custom_prompt = sys.argv[16] if len(sys.argv) > 16 else ""
+        disable_thinking = sys.argv[17].lower() == 'true' if len(sys.argv) > 17 else False
 
         shared_params = {
             "input_dir": input_dir, 
@@ -94,7 +95,15 @@ def main():
         elif desired_model_key == "Custom (Ollama)":
             run_ollama_generation(config, selected_model_key=ollama_model_key, **shared_params)
         else:
-            run_koboldcpp_generation(config, koboldcpp_exe, models_dir, desired_model_key, low_vram_str.lower() == 'true', **shared_params)
+            run_llama_cpp_generation(
+                config,
+                llama_server_exe,
+                models_dir,
+                desired_model_key,
+                low_vram_str.lower() == 'true',
+                disable_thinking=disable_thinking,
+                **shared_params
+            )
         
         send_json_message("status", "Task complete!")
 

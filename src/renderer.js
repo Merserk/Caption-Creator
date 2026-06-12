@@ -248,6 +248,7 @@ async function resetSelectedImages(mode) {
 function updateCheckboxStates() {
     const isExternal = isExternalModelKey(appState.selectedModelKey);
     DOMElements.lowVramInput.disabled = isExternal;
+    DOMElements.enableThinkingInput.disabled = isExternal;
 }
 
 function updateOutputFolderUI(preference) {
@@ -524,6 +525,7 @@ async function buildGenerationOptionsFromCurrentSelection() {
         single_paragraph: true,
         desired_model_key: appState.selectedModelKey,
         low_vram: DOMElements.lowVramInput.checked,
+        disable_thinking: !DOMElements.enableThinkingInput.checked,
         preserve_original_names: DOMElements.preserveOriginalNamesInput.checked,
         lm_studio_model_key: appState.selectedLmStudioModelKey,
         ollama_model_key: appState.selectedOllamaModelKey,

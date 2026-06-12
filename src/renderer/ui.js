@@ -40,6 +40,7 @@ export function collectDOMElements() {
         openFolderBatch: document.getElementById('open-folder-button-batch'),
         downloadZipButton: document.getElementById('download-zip-button'),
         lowVramInput: document.getElementById('low-vram-input'),
+        enableThinkingInput: document.getElementById('enable-thinking-input'),
         preserveOriginalNamesInput: document.getElementById('preserve-original-names-input'),
         outputFolderButton: document.getElementById('output-folder-button'),
         configurationButton: document.getElementById('configuration-button'),

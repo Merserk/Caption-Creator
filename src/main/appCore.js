@@ -31,7 +31,7 @@ function createAppPaths({ app, rootDir }) {
         downloaderScript: path.join(scriptsDir, 'downloader.py'),
         pythonExe: path.join(binRoot, 'python-3.13.13-embed-amd64', 'python.exe'),
         modelsDir: path.join(binRoot, 'models'),
-        koboldLauncherExe: path.join(binRoot, 'koboldcpp', 'koboldcpp-launcher.exe'),
+        llamaServerExe: path.join(binRoot, 'llama.cpp-win-vulkan-x64', 'llama-server.exe'),
         inputDir,
         inputDirSingle: path.join(inputDir, 'single'),
         inputDirBatch: path.join(inputDir, 'batch'),

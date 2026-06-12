@@ -16,6 +16,7 @@ const INPUT_MANIFEST_FILE = '.caption_creator_input_manifest.json';
  * @property {string} gen_type
  * @property {string} desired_model_key
  * @property {boolean} low_vram
+ * @property {boolean} disable_thinking
  * @property {boolean} single_paragraph
  * @property {string|number} max_words
  */
@@ -32,13 +33,13 @@ async function stopAllBackendProcesses(ctx) {
     }
     state.currentBackendJobId = null;
     try {
-        await killKoboldProcesses();
+        await killLlamaCppProcesses();
     } catch (e) {
-        console.error("Error killing koboldcpp processes:", e);
+        console.error("Error killing llama.cpp processes:", e);
     }
 }
 
-async function killKoboldProcesses() {
+async function killLlamaCppProcesses() {
     return new Promise((resolve, reject) => {
         const systemRoot = process.env.SystemRoot || 'C:\\Windows';
         const tasklistPath = path.join(systemRoot, 'System32', 'tasklist.exe');
@@ -61,7 +62,7 @@ async function killKoboldProcesses() {
             for (const line of lines) {
                 const parts = line.split('","');
                 const imageName = parts[0] ? parts[0].replace(/^"/, '').toLowerCase() : '';
-                if (imageName === 'koboldcpp-launcher.exe') {
+                if (imageName === 'llama-server.exe') {
                     const pidStr = parts[1] ? parts[1].replace(/"/g, '') : '';
                     const pid = parseInt(pidStr, 10);
                     if (!Number.isNaN(pid)) pids.push(pid);
@@ -210,7 +211,7 @@ function buildCaptionArgs(ctx, inputDir, outputDir, options) {
         inputDir,
         outputDir,
         getActiveConfigPath(ctx, options.desired_model_key),
-        ctx.paths.koboldLauncherExe,
+        ctx.paths.llamaServerExe,
         ctx.paths.modelsDir,
         options.desired_model_key,
         options.low_vram.toString(),
@@ -223,6 +224,7 @@ function buildCaptionArgs(ctx, inputDir, outputDir, options) {
         options.lm_studio_model_key || '',
         options.ollama_model_key || '',
         options.custom_prompt || '',
+        (options.disable_thinking === true).toString(),
     ];
 }
 
@@ -279,9 +281,9 @@ function attachPreparedBackendHandlers(ctx, backendProcess, runJobId) {
                 ctx.state.currentBackendJobId = null;
             }
             try {
-                await killKoboldProcesses();
+                await killLlamaCppProcesses();
             } catch (e) {
-                console.error("Error killing koboldcpp processes:", e);
+                console.error("Error killing llama.cpp processes:", e);
             }
             sendToRenderer(ctx, 'generation-complete', { jobId: runJobId });
         } else if (!wasStoppedByUser) {
