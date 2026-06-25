@@ -29,7 +29,7 @@ function createAppPaths({ app, rootDir }) {
         configPath: path.join(projectRoot, 'config.ini'),
         captionScript: path.join(scriptsDir, 'caption_generator_portable.py'),
         downloaderScript: path.join(scriptsDir, 'downloader.py'),
-        pythonExe: path.join(binRoot, 'python-3.13.13-embed-amd64', 'python.exe'),
+        pythonExe: path.join(binRoot, 'python-3.13.14-embed-amd64', 'python.exe'),
         modelsDir: path.join(binRoot, 'models'),
         llamaServerExe: path.join(binRoot, 'llama.cpp-win-vulkan-x64', 'llama-server.exe'),
         inputDir,
